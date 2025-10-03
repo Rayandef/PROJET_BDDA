@@ -9,7 +9,7 @@ public class TestDBConfig {
         System.out.println("===== Tests DBConfig =====");
 
         // 1. Test constructeur direct
-        DBConfig conf1 = new DBConfig("./DB");
+        DBConfig conf1 = new DBConfig("./DB", 32, 512);
         System.out.println("Config directe : " + conf1);
         if (!"./DB".equals(conf1.getDbpath())) {
             System.out.println(" Erreur : dbpath direct incorrect !");
@@ -21,10 +21,12 @@ public class TestDBConfig {
         DBConfig conf2 = DBConfig.loadDBConfig("config/dbconfig.properties");
         if (conf2 != null) {
             System.out.println("Config fichier : " + conf2);
-            if (!"./DB".equals(conf2.getDbpath())) {
+            if (!"./DB/binData".equals(conf2.getDbpath())) {
                 System.out.println(" Erreur : dbpath lu incorrect !");
             } else {
                 System.out.println(" Test lecture fichier OK");
+                System.out.println("Le pageSize: " + conf2.getPageSize());
+                System.out.println("Le dm_maxfilecount est: " + conf2.getDm_maxfilecount());
             }
         } else {
             System.out.println(" Erreur : config fichier n’a pas pu être chargée !");
