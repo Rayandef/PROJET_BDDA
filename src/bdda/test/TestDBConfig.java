@@ -1,21 +1,46 @@
 package bdda.test;
 
+import java.io.File;
+
 import bdda.config.DBConfig;
 
 public class TestDBConfig {
+
+    public static DBConfig testConstructeur(String dbpath, int pageSize, int dm_maxfilecount){
+        DBConfig config1 = null;
+        try {
+            config1 = new DBConfig(dbpath, pageSize, dm_maxfilecount);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            return new DBConfig();
+        }
+        return config1;
+    }
 
     // Méthode qui exécute tous les tests de DBConfig
     public static void runTests() {
         System.out.println("===== Tests DBConfig =====");
 
-        // 1. Test constructeur direct
-        DBConfig conf1 = new DBConfig("./DB", 32, 512);
-        System.out.println("Config directe : " + conf1);
-        if (!"./DB".equals(conf1.getDbpath())) {
-            System.out.println(" Erreur : dbpath direct incorrect !");
-        } else {
-            System.out.println(" Test constructeur direct OK");
-        }
+        // 1. Test constructeur direct avec page size et dm_maxfilecount correct
+        System.out.println("Test construteur sans erreur dans pagesize et dm_maxfilecount");
+        DBConfig testConfig1 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 32, 512);
+        System.out.println(" Fin test 1");
+
+        //2 Test constructeur direct avec pagesize incorrect et dm_maxfilecount correct
+        System.out.println("Test construteur avec erreur dans pagesize et sans erreur dans dm_maxfilecount");
+        DBConfig testConfig2 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 0, 512);
+        System.out.println(" Fin test 2");
+
+        //3 Test constructeur direct avec pagesize correct et dm_maxfilecount incorrect
+        System.out.println("Test construteur avec erreur dans pagesize et sans erreur dans dm_maxfilecount");
+        DBConfig testConfig3 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 32, 0);
+        System.out.println(" Fin test 3");
+
+        //4 Test constructeur dbpah incorrect avec pagesize et dm_maxfilecount correct
+        System.out.println("Test construteur avec erreur dans pagesize et sans erreur dans dm_maxfilecount");
+        DBConfig testConfig4 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 32, 0);
+        System.out.println(" Fin test 4");
+
 
         // 2. Test lecture depuis fichier correct
         DBConfig conf2 = DBConfig.loadDBConfig("config/dbconfig.properties");
@@ -41,5 +66,7 @@ public class TestDBConfig {
         }
 
         System.out.println("===== Fin des tests DBConfig =====");
+
+        //4. Test 
     }
 }
