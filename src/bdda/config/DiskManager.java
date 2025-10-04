@@ -22,7 +22,7 @@ public class DiskManager {
     private List<PageID> pagesLibres;
 
     /**Crée un DiskManager
-     * @author !Jordan
+     * @author !Jordan, !Rayan
      * @version !1.0
      * @param dbConfig stocke en variable membre un pointeur
      */
