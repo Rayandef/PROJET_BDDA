@@ -11,7 +11,7 @@ import java.io.BufferedReader;
 import bdda.config.PageID;
 
 /** Classe représentant l'organisation du disque 
- * @author !Jordan
+ * @author !Jordan, Rayan
  * @version 1.0
 */
 public class DiskManager {
