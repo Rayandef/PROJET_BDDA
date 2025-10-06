@@ -10,6 +10,15 @@ public class PageID {
     /** Identifiant de la page */
     private int pageIdx;
 
+    /**Créer une page selon le fileIdx et le pageIdx mis en entrée
+     * @param fileIdx Identifiant du fichier qui comprend la page
+     * @param pageIdx Identifiant de la page pour la situé dans le fichier
+     */
+    public PageID(int fileIdx, int pageIdx){
+        this.fileIdx = fileIdx ;
+        this.pageIdx = pageIdx ;
+    }
+
     /** Récupère FileIdx
      * @return l'id du fichier
      */
