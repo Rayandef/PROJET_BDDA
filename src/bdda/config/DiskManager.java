@@ -6,13 +6,9 @@ import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.ArrayList;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.io.BufferedReader;
-import bdda.config.PageID;
 
 /** Classe représentant l'organisation du disque 
  * @author !Jordan, Rayan, !Anne-Louis
@@ -69,7 +65,7 @@ public class DiskManager {
             long pageSize = dbConfig.getPageSize();
             long nbPages = destinationFile.length() / pageSize;
             // si fichier rempli -> création nouveau fichier
-            if (nbPages >= dbConfig.getDm_maxfilecount()) { 
+            if (nbPages * pageSize >= destinationFile.length()) { // revoir cette condition car inconnu sur la taille max d'un fichier
                 fileIdx++;
                 // vérifie si le nombre max de fichier est atteint
                 if (fileIdx >= dbConfig.getDm_maxfilecount()) {
@@ -105,16 +101,19 @@ public class DiskManager {
     */
     public void readPage(PageID pageID, ByteBuffer buff){
         try{
-            BufferedReader br = new BufferedReader(new FileReader("Data" + pageID.getPageIdx()));
-            String verifLu;
-            while((verifLu = br.readLine()) != null){
-                buff.asCharBuffer().put(br.readLine());
+            File dataDir = new File(dbConfig.getDbpath());
+            File destinationFile = new File(dataDir, "Data" + pageID.getFileIdx() + ".bin") ; // récupère le fichier correspondant
+
+            try (FileChannel channel = FileChannel.open(destinationFile.toPath(), StandardOpenOption.READ)) {
+                long offset = pageID.getPageIdx() * dbConfig.getPageSize();
+                channel.position(offset); // récupère la page à lire
+                buff.clear() ;
+                channel.read(buff); // le buffer est rempli avec la page
+                buff.flip();
             }
-            br.close();
-        }catch(FileNotFoundException e){
+        }catch(IOException e){
+            System.out.println("Erreur lors de la lecture de la page : " + e) ;
             e.printStackTrace();
-        }catch(IOException e2){
-            e2.printStackTrace();
         }
     }
 
@@ -128,16 +127,17 @@ public class DiskManager {
     public void writePage(PageID pageID, ByteBuffer buff){
         try {
             File dataDir = new File(dbConfig.getDbpath());
-            File destinationFile = new File(dataDir, "Data" + pageID.getFileIdx() + ".bin") ;
+            File destinationFile = new File(dataDir, "Data" + pageID.getFileIdx() + ".bin") ; // récupère le fichier correspondant
 
             try (FileChannel channel = FileChannel.open(destinationFile.toPath(), StandardOpenOption.WRITE)) {
-                long offset = pageID.getPageIdx() * dbConfig.getPageSize();
-                channel.position(offset);
-                channel.write(buff);
+                long offset = pageID.getPageIdx() * dbConfig.getPageSize(); 
+                channel.position(offset); // récupère la page pour écrire
+                buff.rewind() ;
+                channel.write(buff); // rempli la page avec le buffer
             }
         } catch (IOException e) {
             System.out.println("Erreur lors de l'écriture de la page : " + e.getLocalizedMessage());
-            e.getStackTrace() ;
+            e.printStackTrace() ;
         }
     }
 
@@ -148,7 +148,7 @@ public class DiskManager {
     */
     public void deAllocPage(PageID pageID){
         try{
-            pagesLibres.add(pageID) ;
+            pagesLibres.add(pageID) ; // rajoute la page dans la liste des pages libres
         } catch (Exception e){
             System.out.println("Erreur lors de la désallocation d'une page : " + e.getMessage()) ;
             e.printStackTrace();
