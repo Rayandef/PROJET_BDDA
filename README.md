@@ -23,8 +23,11 @@ PROJET_BDDA/
 │  └─ bdda/
 │     ├─ Main.java                  # Point d'entrée console (prompt, EXIT)
 │     ├─ config/
-│     │  └─ DBConfig.java           # Lecture config (dbpath) depuis .properties
+│     │  ├─ DBConfig.java           # Lecture config (dbpath) depuis .properties
+│     │  ├─ DiskManager.java        # Gère toutes les opérations sur le disque pour le SGBD
+│     │  └─ PageID.java             # Représente l’identifiant unique d’une page dans le SGBD
 │     ├─ test/
+│     │  ├─ DiskManagerTests.java   # Tests simples sans framework
 │     │  └─ TestDBConfig.java       # Tests simples sans framework
 │     └─ util/
 │        └─ IO.java                 # Placeholder utilitaires
