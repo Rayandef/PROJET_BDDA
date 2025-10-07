@@ -46,4 +46,8 @@ public class PageID {
     public void setPageIdx(int pageIdx) {
         this.pageIdx = pageIdx;
     }
+
+    public String toString(){
+        return "[" + getFileIdx() + "," + getPageIdx() + "]";
+    }
 }

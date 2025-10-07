@@ -212,8 +212,6 @@ public class BufferManager {
 	public enum ReplacementPolicy {
 		LRU,
 		MRU,
-		// Placeholder pour d'autres politiques futures
-		FIFO
 	}
 
 	/** Politique courante ; LRU par défaut */
