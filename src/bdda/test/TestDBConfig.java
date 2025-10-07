@@ -30,7 +30,7 @@ public class TestDBConfig {
     }
 
     /**
-     * Exécute tous les tests unitaires sur la classe DBConfig.
+     * Exécute tous les tests sur la classe DBConfig.
      * Affiche les résultats des différents scénarios de test sur la console.
      */
     public static void runTests() {
@@ -81,7 +81,8 @@ public class TestDBConfig {
         } else {
             System.out.println(" Erreur : un objet a été créé alors que le fichier est absent !");
         }
-        System.out.println("===== Fin des tests DBConfig =====");
         System.out.println(" Fin test 6");
+        System.out.println("===== Fin des tests DBConfig =====");
+        
     }
 }
