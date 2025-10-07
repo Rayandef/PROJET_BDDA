@@ -50,24 +50,33 @@ public class DBConfig {
         this.dm_maxfilecount = dm_maxfilecount;
     }
 
+    /**
+     * @param dbpath
+     * @param pageSize
+     * @param dm_maxfilecount
+     * @param bm_buffercount
+     * @param bm_policy
+     * @throws Exception
+     */
     public DBConfig(String dbpath, int pageSize, int dm_maxfilecount, int bm_buffercount, String bm_policy) throws Exception{
         this(dbpath, pageSize, dm_maxfilecount);
         if(bm_buffercount <= 0){
-            throw new Exception("On ne peut pas avoir un nombre de buffer ");
+            throw new Exception("On ne peut pas avoir un nombre de buffer de 0 ou négatif");
         }
         this.bm_buffercount = bm_buffercount;
-        if(!(bm_policy.equals("LRU")||(bm_policy.equals("MRU"))));{
-            throw new Exception("La politique de remplacement doit être LRU et MRU");
+        this.bm_policy = bm_policy;
+        if(!(this.bm_policy.equals("LRU")||(this.bm_policy.equals("MRU")))){
+            throw new Exception("La politique de remplacement doit être LRU ou MRU");
         }
     }
-
-
 
     /**Créer une configuaration par défaut */
     public DBConfig(){
         this.dbpath = "."+ File.separator+"DB"+File.separator+"binData";
-        this.pageSize = 1;
-        this.dm_maxfilecount = 1;
+        this.pageSize = 32;
+        this.dm_maxfilecount = 512;
+        this.bm_buffercount = 20;
+        this.bm_policy = "LRU";
     }
 
     /**
@@ -91,6 +100,19 @@ public class DBConfig {
         return this.dm_maxfilecount;
     }
 
+    /**
+     * @return Le nombre maximum de buffers
+     */
+    public int getBm_buffercount(){
+        return this.bm_buffercount;
+    }
+
+    /**
+     * @return La politique de remplacement utilisée
+     */
+    public String getBm_policy(){
+        return this.bm_policy;
+    }
 
     /**
      * Charge la configuration de la base de données depuis un fichier de propriétés.
@@ -123,6 +145,6 @@ public class DBConfig {
      */
     @Override
     public String toString() {
-        return "DBConfig{" +"dbpath='" + dbpath + '\'' + ", pageSize=" + pageSize +", dm_maxfilecount=" + dm_maxfilecount +'}';
+        return "DBConfig{" +"dbpath='" + this.dbpath + File.separator + ", pageSize=" + this.pageSize +", dm_maxfilecount=" + this.dm_maxfilecount + ", bm_buffercount=" + this.bm_buffercount + ", bm_policy =" + this.bm_policy + '}';
     }
 }
