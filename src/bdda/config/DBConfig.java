@@ -12,17 +12,34 @@ public class DBConfig {
     private int pageSize;
     /**dm_maxfilecount -> variable indiquant le nombres maximum de fichiers Datax.bin */
     private int dm_maxfilecount;
+    /**dm_buffercount -> variable indiquant le nombre de buffers gérés par le BufferManager */
+    private int bm_buffercount;
+    /**bm_policy -> variable indiquant la polotique de remplacement */
+    private String bm_policy;
+
+    /**
+     * @param dbpath
+     * @throws Exception
+     */
+    public DBConfig(String dbpath) throws Exception{
+        if(!dbpath.equals("." + File.separator + "DB" + File.separator + "binData")){
+            throw new Exception("dbpath incorrect");
+        }
+        this.dbpath = dbpath;
+        this.pageSize = 32;
+        this.dm_maxfilecount = 512;
+        this.bm_buffercount = 20;
+        this.bm_policy = "LRU";
+    }
 
     /**Créer une configuration de la base de données selon les variables mises en entrées
      * @param dbpath Le chemin vers la base de données
      * @param pageSize La taille des pages de données
      * @param dm_maxfilecount Le nombre maximum de fichiers Datax.bin
+     * @throws Exception
      */
     public DBConfig(String dbpath, int pageSize, int dm_maxfilecount) throws Exception{
-        this.dbpath = dbpath;
-        if(!dbpath.equals("." + File.separator + "DB" + File.separator + "binData")){
-            throw new Exception("dbpath incorrect");
-        }
+        this(dbpath);
         if(pageSize<=0){
             throw new Exception("On ne peut pas avoir une page de taille nulle ou négative");
         }
@@ -32,6 +49,19 @@ public class DBConfig {
         }
         this.dm_maxfilecount = dm_maxfilecount;
     }
+
+    public DBConfig(String dbpath, int pageSize, int dm_maxfilecount, int bm_buffercount, String bm_policy) throws Exception{
+        this(dbpath, pageSize, dm_maxfilecount);
+        if(bm_buffercount <= 0){
+            throw new Exception("On ne peut pas avoir un nombre de buffer ");
+        }
+        this.bm_buffercount = bm_buffercount;
+        if(!(bm_policy.equals("LRU")||(bm_policy.equals("MRU"))));{
+            throw new Exception("La politique de remplacement doit être LRU et MRU");
+        }
+    }
+
+
 
     /**Créer une configuaration par défaut */
     public DBConfig(){
@@ -77,7 +107,9 @@ public class DBConfig {
             String dbpath = props.getProperty("dbpath");
             int pageSize = Integer.parseInt(props.getProperty("pageSize"));
             int dm_maxfilecount = Integer.parseInt(props.getProperty("dm_maxfilecount"));
-            config = new DBConfig(dbpath, pageSize, dm_maxfilecount);
+            int bm_buffercount = Integer.parseInt(props.getProperty("bm_buffercount"));
+            String bm_policy = props.getProperty("bm_policy");
+            config = new DBConfig(dbpath, pageSize, dm_maxfilecount, bm_buffercount, bm_policy);
 
         } catch (Exception e) {
             System.out.println("Erreur lecture config: " + e.getMessage());
