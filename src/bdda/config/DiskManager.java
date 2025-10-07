@@ -5,7 +5,9 @@ import java.nio.channels.FileChannel;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.ArrayList;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -65,7 +67,7 @@ public class DiskManager {
             long pageSize = dbConfig.getPageSize();
             long nbPages = destinationFile.length() / pageSize;
             // si fichier rempli -> création nouveau fichier
-            if (nbPages * pageSize >= destinationFile.length()) { // revoir cette condition car inconnu sur la taille max d'un fichier
+            if (destinationFile.length() >= 64 ) { // revoir cette condition car inconnu sur la taille max d'un fichier
                 fileIdx++;
                 // vérifie si le nombre max de fichier est atteint
                 if (fileIdx >= dbConfig.getDm_maxfilecount()) {
@@ -154,13 +156,45 @@ public class DiskManager {
             e.printStackTrace();
         }
     }
+
+    /** Récupère la liste de pages libres
+     * @author !Anne-Louis
+     * @version !1.0
+    */
+    public List<PageID> lirePageLibres(){
+        File freepages = new File(dbConfig.getDbpath(), "freepages.txt") ;
+        pagesLibres = new ArrayList<>() ;
+        if (freepages.exists()){
+            try (BufferedReader br = new BufferedReader(new FileReader(dbConfig.getDbpath() + File.separator + "freepages.txt"))) {
+                String ligne;
+                while ((ligne = br.readLine()) != null) {
+                    // On enlève les espaces parasites
+                    ligne = ligne.trim();
+                    if (ligne.isEmpty()) continue; // ignore les lignes vides
+
+                    // On sépare les 2 valeurs
+                    String[] parts = ligne.split(",");
+                    if (parts.length == 2) {
+                        int fileIdx = Integer.parseInt(parts[0].trim());
+                        int pageIdx = Integer.parseInt(parts[1].trim());
+                        pagesLibres.add(new PageID(fileIdx, pageIdx));
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return pagesLibres ;
+    }
+
     /**
      * Gère les opérations d'initialisations
      * @author !Jordan, Rayan
      * @version !1.0
      */
     public void init(){
-        pagesLibres = new ArrayList<>();
+        pagesLibres = lirePageLibres();
         try {
             File dataDir = new File(dbConfig.getDbpath());
             if (!dataDir.exists()) {
