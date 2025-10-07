@@ -102,10 +102,10 @@ public class TestDBConfig {
         //7. Test constructeur avec bm_buffercount incorrect
         System.out.println("Test constructeur avec bm_buffercount incorrect");
         DBConfig testconf4 = testConstructeurTD3("."+File.separator+"DB"+File.separator+"binData", 32, 512, 0, "LRU");
-        System.out.println("Test7");
-        
+        System.out.println("Fin test 7");
+        System.out.println("Test8");
         //8. Test constructeur avec bm_policy incorrect
-        System.out.println("Test constructeur avec bm_buffercount incorrect");
+        System.out.println("Test constructeur avec bm_policy incorrect");
         DBConfig testconf5 = testConstructeurTD3("."+File.separator+"DB"+File.separator+"binData", 32, 512, 20, "FIFO");
         System.out.println("===== Fin des tests DBConfig =====");
     }

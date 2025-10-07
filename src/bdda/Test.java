@@ -2,8 +2,10 @@ package bdda;
 
 import bdda.test.TestDBConfig;
 
-public class Main{
+public class Test {
     public static void main(String[] args){
-        System.out.println("PAS ENCORE");
+        TestDBConfig.runTests();
+
+        System.out.println("FIN");
     }
 }
