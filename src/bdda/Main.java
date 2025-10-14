@@ -1,7 +1,5 @@
 package bdda;
 
-import bdda.test.TestDBConfig;
-
 public class Main{
     public static void main(String[] args){
         System.out.println("PAS ENCORE");

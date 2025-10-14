@@ -1,6 +1,10 @@
 package bdda.config;
 
 import java.util.List;
+//INT 4 OCTETS
+//FLOAT 4 OCTETS
+//CHAR 64
+//VARCHAR 64
 
 /**
  * Classe correspondant à la relation entre une entité et une association"
