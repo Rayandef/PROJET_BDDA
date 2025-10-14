@@ -26,7 +26,7 @@ public class DBConfig {
             throw new Exception("dbpath incorrect");
         }
         this.dbpath = dbpath;
-        this.pageSize = 32;
+        this.pageSize = 136;
         this.dm_maxfilecount = 512;
         this.bm_buffercount = 20;
         this.bm_policy = "LRU";
@@ -73,7 +73,7 @@ public class DBConfig {
     /**Créer une configuaration par défaut */
     public DBConfig(){
         this.dbpath = "."+ File.separator+"DB"+File.separator+"binData";
-        this.pageSize = 32;
+        this.pageSize = 136;
         this.dm_maxfilecount = 512;
         this.bm_buffercount = 20;
         this.bm_policy = "LRU";
