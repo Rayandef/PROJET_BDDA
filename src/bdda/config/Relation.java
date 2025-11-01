@@ -59,7 +59,7 @@ public class Relation {
     /*Méthode créer pour le TP5*/
     private int calculerTailleRecord() {
         int taille = 0;
-        for (InfoColonne<String, String> col : infoColonnes) {
+        for (InfoColonne<String, String> col : infoColonne) {
             switch (col.getType().toUpperCase()) {
                 case "INT":
                     taille += 4;
