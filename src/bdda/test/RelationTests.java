@@ -4,23 +4,20 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 
+import bdda.config.DBConfig;
+import bdda.config.DiskManager;
+import bdda.config.BufferManager;
 import bdda.config.InfoColonne;
 import bdda.config.Relation;
 import bdda.config.Record;
+import bdda.config.PageID;
 
-/**
- * Classe de test pour Relation
- * @author Rayan
- * @version 1.0
- */
 public class RelationTests {
 
-    
     public static void main(String[] args) {
         System.out.println("TESTS Relation");
 
         try {
-            // === Création des colonnes ===
             InfoColonne<String, String> col1 = new InfoColonne<>();
             col1.setNom("id");
             col1.setType("INT");
@@ -39,20 +36,23 @@ public class RelationTests {
 
             List<InfoColonne<String, String>> colonnes = Arrays.asList(col1, col2, col3, col4);
 
-            Relation relation = new Relation("Etudiants", colonnes);
-            System.out.println("Relation créée avec succès : " + relation.getNom() + " (" + relation.getColonne() + " colonnes)");
+            DBConfig conf = new DBConfig();
+            DiskManager dm = new DiskManager(conf);
+            BufferManager bm = new BufferManager(conf, dm);
 
-            bdda.config.Record record = new bdda.config.Record(Arrays.asList(
-                "42", "18.5", "Rayan", "Paris"
-            ));
+            Relation relation = new Relation("Etudiants", colonnes, conf, dm, bm);
+            System.out.println("Relation créée avec succès : " + relation.getNom() +
+                               " (" + relation.getColonne() + " colonnes)");
 
-            int bufferSize = 200;
+            Record record = new Record(Arrays.asList("42", "18.5", "Rayan", "Paris"));
+
+            int bufferSize = conf.getPageSize();
             ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
 
             relation.writeRecordToBuffer(record, buffer, 0);
             System.out.println("Écriture du record dans le buffer réussie.");
 
-            bdda.config.Record recordLu = new bdda.config.Record();
+            Record recordLu = new Record();
             relation.readFromBuffer(recordLu, buffer, 0);
 
             System.out.println("Lecture du buffer réussie !");
