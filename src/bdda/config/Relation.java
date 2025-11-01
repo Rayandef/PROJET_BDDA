@@ -19,6 +19,13 @@ public class Relation {
     /** Info de chaque colonne */
     private List<InfoColonne<String, String>> infoColonne;
 
+    /** Ajout de variables TP5 **/
+    private PageID headerPageId;
+    private int nbSlotsParPage;
+    private DiskManager diskManager;
+    private BufferManager bufferManager;
+
+
     /** Liste des tailles des 4 types de colonnes */
     public enum Size{
         INT(4), FLOAT(4), CHAR(64), VARCHAR(64) ;
@@ -34,20 +41,45 @@ public class Relation {
         }
     }
 
-    /** Crée une relation 
+    /** Crée une relation (modifié TP5)
      * @param nom
      * @param infoColonne
     */
-    public Relation(String nom, List<InfoColonne<String, String>> infoColonne) throws Exception{
+    public Relation(String nom, List<InfoColonne<String, String>> infoColonne,
+                DBConfig dbConfig, DiskManager dm, BufferManager bm) throws Exception {
         this.nom = nom;
-        for(InfoColonne<String, String> info : infoColonne){
-            if (!(info.getType().equals("INT") ||info.getType().equals("FLOAT") || info.getType().equals("CHAR") || info.getType().equals("VARCHAR"))) {
-                throw new Exception("L'élément " + (infoColonne.indexOf(info) + 1) + " de la liste est incorrect");
-            } 
-            this.infoColonne = infoColonne;
-        }
-        colonne = infoColonne.size();
+        this.infoColonne = infoColonne;
+        this.colonne = infoColonne.size();
+        this.diskManager = dm;
+        this.bufferManager = bm;
+        this.headerPageId = dm.allocPage();
+        this.nbSlotsParPage = dbConfig.getPageSize() / calculerTailleRecord();
     }
+
+    /*Méthode créer pour le TP5*/
+    private int calculerTailleRecord() {
+        int taille = 0;
+        for (InfoColonne<String, String> col : infoColonnes) {
+            switch (col.getType().toUpperCase()) {
+                case "INT":
+                    taille += 4;
+                    break;
+                case "FLOAT":
+                    taille += 4;
+                    break;
+                case "CHAR":
+                    taille += 64;
+                    break;
+                case "VARCHAR":
+                    taille += 64; // taille max
+                    break;
+                default:
+                    System.err.println("Type inconnu : " + col.getType());
+            }
+        }
+        return taille;
+    }
+
 
     /**
      * Récupère le nombre de colonnes
