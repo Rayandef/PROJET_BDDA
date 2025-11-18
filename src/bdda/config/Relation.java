@@ -255,8 +255,61 @@ public class Relation {
 
     }
 
+    /**
+     * Parcourt toutes les header pages afin de rassembler la liste des pages de données.
+     * Chaque header est structurée ainsi : [nbEntries][nextFileIdx][nextPageIdx]
+     * suivi de nbEntries triplets (fileIdx, pageIdx, nbSlotsLibres).
+     */
     public List<PageID> getDataPages(){
+        ArrayList<PageID> dataPages = new ArrayList<>();
 
+        if (bufferManager == null || headerPageId == null) {
+            return dataPages;
+        }
+
+        PageID currentHeader = new PageID(headerPageId.getFileIdx(), headerPageId.getPageIdx());
+
+        while (currentHeader != null) {
+            PageID headerToRelease = currentHeader;
+            ByteBuffer headerBuffer = bufferManager.getPage(headerToRelease);
+            int entriesCount = 0;
+            int nextHeaderFileIdx = -1;
+            int nextHeaderPageIdx = -1;
+
+            try {
+                if (headerBuffer.remaining() >= Integer.BYTES) {
+                    entriesCount = Math.max(0, headerBuffer.getInt());
+                }
+
+                if (headerBuffer.remaining() >= Integer.BYTES * 2) {
+                    nextHeaderFileIdx = headerBuffer.getInt();
+                    nextHeaderPageIdx = headerBuffer.getInt();
+                }
+
+                for (int i = 0; i < entriesCount; i++) {
+                    if (headerBuffer.remaining() < Integer.BYTES * 3) {
+                        break;
+                    }
+                    int fileIdx = headerBuffer.getInt();
+                    int pageIdx = headerBuffer.getInt();
+                    headerBuffer.getInt(); 
+
+                    if (fileIdx >= 0 && pageIdx >= 0) {
+                        dataPages.add(new PageID(fileIdx, pageIdx));
+                    }
+                }
+            } finally {
+                bufferManager.FreePage(headerToRelease, false);
+            }
+
+            if (nextHeaderFileIdx >= 0 && nextHeaderPageIdx >= 0) {
+                currentHeader = new PageID(nextHeaderFileIdx, nextHeaderPageIdx);
+            } else {
+                currentHeader = null;
+            }
+        }
+
+        return dataPages;
     }
 
     public RecordId insertRecord(Record record){
