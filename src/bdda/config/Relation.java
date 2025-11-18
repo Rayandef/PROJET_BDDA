@@ -257,38 +257,36 @@ public class Relation {
         pagesLibres.add(pid);
     }
 
-    private boolean isSlotUsed(ByteBuffer buff, int slot) {
-        int byteIndex = slot / 8;
-        int bitIndex = slot % 8;
-
-        byte b = buff.get(1 + byteIndex);
-        return ((b >> bitIndex) & 1) == 1;
-    }
-
-    private boolean pageHasEnoughSpace(ByteBuffer buff) {
-        buff.rewind();
-
-        int nbSlots = buff.get(0);
-
-        for (int slot = 0; slot < nbSlots; slot++) {
-            if (!isSlotUsed(buff, slot)) {
-                return true; 
-            }
-        }
-
-        return false;
-    }
-
     public PageID getFreeDataPageId(int sizeRecord) {
-        for (PageID pid : pagesLibres) {
-            ByteBuffer buff = bufferManager.getPage(pid);
-            if (pageHasEnoughSpace(buff)) {
-                bufferManager.FreePage(pid, false);
-                return pid;
+        try {
+            ByteBuffer headerBuffer = bufferManager.getPage(headerPageId);
+
+            int nbPages = headerBuffer.getInt(0);
+            for (int i = 0; i < nbPages; i++) {
+                int offset = 4 + i * 8;
+                int fileIdx = headerBuffer.getInt(offset);
+                int pageIdx = headerBuffer.getInt(offset + 4);
+                PageID pageID = new PageID(fileIdx, pageIdx);
+
+                ByteBuffer dataBuffer = bufferManager.getPage(pageID);
+
+                int espaceLibre = dataBuffer.getInt(0);
+
+                if (espaceLibre >= sizeRecord) {
+                    bufferManager.FreePage(pageID, false);
+                    bufferManager.FreePage(headerPageId, false);
+                    return pageID;
+                }
+                bufferManager.FreePage(pageID, false);
             }
-            bufferManager.FreePage(pid, false);
+
+            bufferManager.FreePage(headerPageId, false);
+            return null;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
-        return null;
     }
 
 
