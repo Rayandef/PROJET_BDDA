@@ -239,20 +239,295 @@ public class Relation {
     record.setValeurs(valeurs);
     }
 
-    public void addDataPage(){
+    private int getRecordSlotSize() {
+        int size = 0;
+        for (InfoColonne<String, String> info : infoColonne) {
+            String type = info.getType().toUpperCase();
+            switch (type) {
+                case "INT":
+                case "FLOAT":
+                    size += Integer.BYTES;
+                    break;
+                case "CHAR":
+                    size += Size.CHAR.getTaille();
+                    break;
+                case "VARCHAR":
+                    size += Integer.BYTES + Size.VARCHAR.getTaille();
+                    break;
+                default:
+                    break;
+            }
+        }
+        return size;
+    }
 
+    private int getDataPageHeaderSize() {
+        return Integer.BYTES + nbCasesParPage;
+    }
+
+    private int getDataPageRecordOffset(int slotIdx) {
+        return getDataPageHeaderSize() + slotIdx * getRecordSlotSize();
+    }
+
+    private int getHeaderEntryOffset(int entryIndex) {
+        int fixed = Integer.BYTES * 3;
+        int entrySize = Integer.BYTES * 3;
+        return fixed + entryIndex * entrySize;
+    }
+
+    private int getHeaderEntryCapacity() {
+        if (bufferManager == null) {
+            return 0;
+        }
+        int pageSize = bufferManager.getDbConfig().getPageSize();
+        int usable = pageSize - Integer.BYTES * 3;
+        int entrySize = Integer.BYTES * 3;
+        return Math.max(1, usable / entrySize);
+    }
+
+    private static class HeaderEntryInfo {
+        PageID headerPage;
+        int entryIndex;
+        PageID dataPage;
+        int freeSlots;
+
+        HeaderEntryInfo(PageID headerPage, int entryIndex, PageID dataPage, int freeSlots) {
+            this.headerPage = headerPage;
+            this.entryIndex = entryIndex;
+            this.dataPage = dataPage;
+            this.freeSlots = freeSlots;
+        }
+    }
+
+    private List<HeaderEntryInfo> collectHeaderEntries() {
+        ArrayList<HeaderEntryInfo> entries = new ArrayList<>();
+        if (bufferManager == null || headerPageId == null) {
+            return entries;
+        }
+
+        PageID currentHeader = new PageID(headerPageId.getFileIdx(), headerPageId.getPageIdx());
+        while (currentHeader != null) {
+            PageID headerToRead = new PageID(currentHeader.getFileIdx(), currentHeader.getPageIdx());
+            ByteBuffer headerBuffer = bufferManager.getPage(headerToRead);
+            int nbEntries = headerBuffer.getInt(0);
+            int nextFileIdx = headerBuffer.getInt(Integer.BYTES);
+            int nextPageIdx = headerBuffer.getInt(Integer.BYTES * 2);
+            try {
+                for (int i = 0; i < nbEntries; i++) {
+                    int offset = getHeaderEntryOffset(i);
+                    int fileIdx = headerBuffer.getInt(offset);
+                    int pageIdx = headerBuffer.getInt(offset + Integer.BYTES);
+                    int freeSlots = headerBuffer.getInt(offset + Integer.BYTES * 2);
+                    entries.add(new HeaderEntryInfo(
+                        new PageID(headerToRead.getFileIdx(), headerToRead.getPageIdx()),
+                        i,
+                        new PageID(fileIdx, pageIdx),
+                        freeSlots));
+                }
+            } finally {
+                bufferManager.FreePage(headerToRead, false);
+            }
+
+            if (nextFileIdx >= 0 && nextPageIdx >= 0) {
+                currentHeader = new PageID(nextFileIdx, nextPageIdx);
+            } else {
+                currentHeader = null;
+            }
+        }
+        return entries;
+    }
+
+    private HeaderEntryInfo findHeaderEntry(PageID dataPageId) {
+        for (HeaderEntryInfo entry : collectHeaderEntries()) {
+            if (entry.dataPage.getFileIdx() == dataPageId.getFileIdx() &&
+                entry.dataPage.getPageIdx() == dataPageId.getPageIdx()) {
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    private void updateHeaderFreeSlots(PageID dataPageId, int freeSlots) {
+        HeaderEntryInfo entry = findHeaderEntry(dataPageId);
+        if (entry == null || bufferManager == null) {
+            return;
+        }
+        ByteBuffer headerBuffer = bufferManager.getPage(entry.headerPage);
+        try {
+            int offset = getHeaderEntryOffset(entry.entryIndex) + Integer.BYTES * 2;
+            headerBuffer.putInt(offset, freeSlots);
+        } finally {
+            bufferManager.FreePage(entry.headerPage, true);
+        }
+    }
+
+    private void removeHeaderEntry(PageID dataPageId) {
+        HeaderEntryInfo entry = findHeaderEntry(dataPageId);
+        if (entry == null || bufferManager == null) {
+            return;
+        }
+        ByteBuffer headerBuffer = bufferManager.getPage(entry.headerPage);
+        try {
+            int nbEntries = headerBuffer.getInt(0);
+            int lastIndex = nbEntries - 1;
+            if (lastIndex >= 0 && entry.entryIndex != lastIndex) {
+                int source = getHeaderEntryOffset(lastIndex);
+                int target = getHeaderEntryOffset(entry.entryIndex);
+                int fileIdx = headerBuffer.getInt(source);
+                int pageIdx = headerBuffer.getInt(source + Integer.BYTES);
+                int freeSlots = headerBuffer.getInt(source + Integer.BYTES * 2);
+                headerBuffer.putInt(target, fileIdx);
+                headerBuffer.putInt(target + Integer.BYTES, pageIdx);
+                headerBuffer.putInt(target + Integer.BYTES * 2, freeSlots);
+            }
+            headerBuffer.putInt(0, Math.max(0, nbEntries - 1));
+        } finally {
+            bufferManager.FreePage(entry.headerPage, true);
+        }
+    }
+
+    private void initHeaderPage(PageID headerId) {
+        if (bufferManager == null) {
+            return;
+        }
+        ByteBuffer buffer = bufferManager.getPage(headerId);
+        try {
+            buffer.putInt(0, 0);
+            buffer.putInt(Integer.BYTES, -1);
+            buffer.putInt(Integer.BYTES * 2, -1);
+        } finally {
+            bufferManager.FreePage(headerId, true);
+        }
+    }
+
+    private void registerDataPageInHeader(PageID dataPageId, int freeSlots) {
+        if (bufferManager == null || headerPageId == null) {
+            return;
+        }
+        PageID currentHeader = new PageID(headerPageId.getFileIdx(), headerPageId.getPageIdx());
+        while (true) {
+            PageID headerToEdit = new PageID(currentHeader.getFileIdx(), currentHeader.getPageIdx());
+            ByteBuffer headerBuffer = bufferManager.getPage(headerToEdit);
+            int nbEntries = headerBuffer.getInt(0);
+            int nextFileIdx = headerBuffer.getInt(Integer.BYTES);
+            int nextPageIdx = headerBuffer.getInt(Integer.BYTES * 2);
+            int capacity = getHeaderEntryCapacity();
+
+            if (nbEntries < capacity) {
+                int offset = getHeaderEntryOffset(nbEntries);
+                headerBuffer.putInt(offset, dataPageId.getFileIdx());
+                headerBuffer.putInt(offset + Integer.BYTES, dataPageId.getPageIdx());
+                headerBuffer.putInt(offset + Integer.BYTES * 2, freeSlots);
+                headerBuffer.putInt(0, nbEntries + 1);
+                bufferManager.FreePage(headerToEdit, true);
+                return;
+            }
+
+            if (nextFileIdx < 0 || nextPageIdx < 0) {
+                PageID newHeader = bufferManager.allocPage();
+                initHeaderPage(newHeader);
+                headerBuffer.putInt(Integer.BYTES, newHeader.getFileIdx());
+                headerBuffer.putInt(Integer.BYTES * 2, newHeader.getPageIdx());
+                bufferManager.FreePage(headerToEdit, true);
+                currentHeader = newHeader;
+            } else {
+                bufferManager.FreePage(headerToEdit, false);
+                currentHeader = new PageID(nextFileIdx, nextPageIdx);
+            }
+        }
+    }
+
+    private void initializeDataPage(PageID pageId) {
+        if (bufferManager == null) {
+            return;
+        }
+        ByteBuffer buffer = bufferManager.getPage(pageId);
+        try {
+            buffer.putInt(0, 0);
+            for (int i = 0; i < nbCasesParPage; i++) {
+                buffer.put(Integer.BYTES + i, (byte) 0);
+            }
+        } finally {
+            bufferManager.FreePage(pageId, true);
+        }
+    }
+
+    private PageID allocateAndRegisterDataPage() {
+        if (bufferManager == null) {
+            return null;
+        }
+        PageID newPage = bufferManager.allocPage();
+        if (newPage == null) {
+            return null;
+        }
+        initializeDataPage(newPage);
+        registerDataPageInHeader(newPage, nbCasesParPage);
+        return newPage;
+    }
+
+    public void addDataPage(){
+        allocateAndRegisterDataPage();
     }
 
     public PageID getFreeDataPageId(int sizeRecord){
-
+        for (HeaderEntryInfo entry : collectHeaderEntries()) {
+            if (entry.freeSlots > 0) {
+                return entry.dataPage;
+            }
+        }
+        return allocateAndRegisterDataPage();
     }
 
     public RecordId writeRecordToDataPage(Record record, PageID pageId){
+        if (record == null || pageId == null || bufferManager == null) {
+            return null;
+        }
+        ByteBuffer buffer = bufferManager.getPage(pageId);
+        int slotWritten = -1;
+        int updatedUsed = -1;
+        try {
+            int usedSlots = buffer.getInt(0);
+            for (int i = 0; i < nbCasesParPage; i++) {
+                int stateOffset = Integer.BYTES + i;
+                if (buffer.get(stateOffset) == 0) {
+                    writeRecordToBuffer(record, buffer, getDataPageRecordOffset(i));
+                    buffer.put(stateOffset, (byte) 1);
+                    updatedUsed = usedSlots + 1;
+                    buffer.putInt(0, updatedUsed);
+                    slotWritten = i;
+                    break;
+                }
+            }
+        } finally {
+            bufferManager.FreePage(pageId, slotWritten >= 0);
+        }
 
+        if (slotWritten < 0) {
+            return null;
+        }
+        updateHeaderFreeSlots(pageId, nbCasesParPage - updatedUsed);
+        return new RecordId(pageId, slotWritten);
     }
 
     public ArrayList<Record> getRecordsInDataPage(PageID pageId){
-
+        ArrayList<Record> records = new ArrayList<>();
+        if (pageId == null || bufferManager == null) {
+            return records;
+        }
+        ByteBuffer buffer = bufferManager.getPage(pageId);
+        try {
+            for (int i = 0; i < nbCasesParPage; i++) {
+                int stateOffset = Integer.BYTES + i;
+                if (buffer.get(stateOffset) != 0) {
+                    Record r = new Record();
+                    readFromBuffer(r, buffer, getDataPageRecordOffset(i));
+                    records.add(r);
+                }
+            }
+        } finally {
+            bufferManager.FreePage(pageId, false);
+        }
+        return records;
     }
 
     /**
@@ -262,66 +537,67 @@ public class Relation {
      */
     public List<PageID> getDataPages(){
         ArrayList<PageID> dataPages = new ArrayList<>();
-
-        if (bufferManager == null || headerPageId == null) {
-            return dataPages;
+        for (HeaderEntryInfo entry : collectHeaderEntries()) {
+            dataPages.add(entry.dataPage);
         }
-
-        PageID currentHeader = new PageID(headerPageId.getFileIdx(), headerPageId.getPageIdx());
-
-        while (currentHeader != null) {
-            PageID headerToRelease = currentHeader;
-            ByteBuffer headerBuffer = bufferManager.getPage(headerToRelease);
-            int entriesCount = 0;
-            int nextHeaderFileIdx = -1;
-            int nextHeaderPageIdx = -1;
-
-            try {
-                if (headerBuffer.remaining() >= Integer.BYTES) {
-                    entriesCount = Math.max(0, headerBuffer.getInt());
-                }
-
-                if (headerBuffer.remaining() >= Integer.BYTES * 2) {
-                    nextHeaderFileIdx = headerBuffer.getInt();
-                    nextHeaderPageIdx = headerBuffer.getInt();
-                }
-
-                for (int i = 0; i < entriesCount; i++) {
-                    if (headerBuffer.remaining() < Integer.BYTES * 3) {
-                        break;
-                    }
-                    int fileIdx = headerBuffer.getInt();
-                    int pageIdx = headerBuffer.getInt();
-                    headerBuffer.getInt(); 
-
-                    if (fileIdx >= 0 && pageIdx >= 0) {
-                        dataPages.add(new PageID(fileIdx, pageIdx));
-                    }
-                }
-            } finally {
-                bufferManager.FreePage(headerToRelease, false);
-            }
-
-            if (nextHeaderFileIdx >= 0 && nextHeaderPageIdx >= 0) {
-                currentHeader = new PageID(nextHeaderFileIdx, nextHeaderPageIdx);
-            } else {
-                currentHeader = null;
-            }
-        }
-
         return dataPages;
     }
 
     public RecordId insertRecord(Record record){
-
+        if (record == null) {
+            return null;
+        }
+        PageID target = getFreeDataPageId(getRecordSlotSize());
+        if (target == null) {
+            return null;
+        }
+        return writeRecordToDataPage(record, target);
     }
 
     public ArrayList<Record> getAllRecords(){
-
+        ArrayList<Record> all = new ArrayList<>();
+        for (PageID pageId : getDataPages()) {
+            all.addAll(getRecordsInDataPage(pageId));
+        }
+        return all;
     }
 
     public void deleteRecord(RecordId rid){
+        if (rid == null || rid.getPageId() == null || bufferManager == null) {
+            return;
+        }
+        PageID pageId = rid.getPageId();
+        ByteBuffer buffer = bufferManager.getPage(pageId);
+        int updatedUsed = -1;
+        boolean modified = false;
+        try {
+            int slotIdx = rid.getSlotIdx();
+            if (slotIdx < 0 || slotIdx >= nbCasesParPage) {
+                return;
+            }
+            int stateOffset = Integer.BYTES + slotIdx;
+            if (buffer.get(stateOffset) == 0) {
+                return;
+            }
+            int currentUsed = buffer.getInt(0);
+            updatedUsed = Math.max(0, currentUsed - 1);
+            buffer.put(stateOffset, (byte) 0);
+            buffer.putInt(0, updatedUsed);
+            modified = true;
+        } finally {
+            bufferManager.FreePage(pageId, modified);
+        }
 
+        if (updatedUsed < 0) {
+            return;
+        }
+
+        if (updatedUsed == 0) {
+            bufferManager.deAllocPage(pageId);
+            removeHeaderEntry(pageId);
+        } else {
+            updateHeaderFreeSlots(pageId, nbCasesParPage - updatedUsed);
+        }
     }
 
 
