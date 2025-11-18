@@ -10,6 +10,7 @@ import java.util.List;
  */
 public class Relation {
 
+
     /** Nom de la relation */
     private String nom;
 
@@ -18,6 +19,19 @@ public class Relation {
 
     /** Info de chaque colonne */
     private List<InfoColonne<String, String>> infoColonne;
+
+    /** Identifiant de la Header Page de la relation */
+    private PageID headerPageId;
+
+    /** Nombre de cases par page de données */
+    private int nbCasesParPage;
+
+    /** Référence vers le DiskManager */
+    private DiskManager diskManager;
+
+    /** Référence vers le BufferManager */
+    private BufferManager bufferManager;
+
 
     /** Liste des tailles des 4 types de colonnes */
     public enum Size{
@@ -48,6 +62,29 @@ public class Relation {
         }
         colonne = infoColonne.size();
     }
+
+    public Relation(String nom, List<InfoColonne<String, String>> infoColonne, PageID headerPageId, int nbCasesParPage, DiskManager diskManager, BufferManager bufferManager) throws Exception {
+
+    this.nom = nom;
+
+    for (InfoColonne<String, String> info : infoColonne) {
+        if (!(info.getType().equals("INT") ||
+              info.getType().equals("FLOAT") ||
+              info.getType().equals("CHAR") ||
+              info.getType().equals("VARCHAR"))) {
+            throw new Exception("L'élément " + (infoColonne.indexOf(info) + 1) + " est incorrect");
+        }
+    }
+
+    this.infoColonne = infoColonne;
+    this.colonne = infoColonne.size();
+
+    this.headerPageId = headerPageId;
+    this.nbCasesParPage = nbCasesParPage;
+    this.diskManager = diskManager;
+    this.bufferManager = bufferManager;
+    }
+
 
     /**
      * Récupère le nombre de colonnes
@@ -201,4 +238,38 @@ public class Relation {
 
     record.setValeurs(valeurs);
     }
+
+    public void addDataPage(){
+
+    }
+
+    public PageID getFreeDataPageId(int sizeRecord){
+
+    }
+
+    public RecordId writeRecordToDataPage(Record record, PageID pageId){
+
+    }
+
+    public ArrayList<Record> getRecordsInDataPage(PageID pageId){
+
+    }
+
+    public List<PageID> getDataPages(){
+
+    }
+
+    public RecordId insertRecord(Record record){
+
+    }
+
+    public ArrayList<Record> getAllRecords(){
+
+    }
+
+    public void deleteRecord(RecordId rid){
+
+    }
+
+
 }
