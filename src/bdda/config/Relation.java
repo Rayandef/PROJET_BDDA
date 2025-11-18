@@ -32,6 +32,12 @@ public class Relation {
     /** Référence vers le BufferManager */
     private BufferManager bufferManager;
 
+    /** Liste des pages ayant encore de la place */
+    private List<PageID> pagesLibres = new ArrayList<>();
+
+    /** Liste des pages pleines */
+    private List<PageID> pagesPleines = new ArrayList<>();
+
 
     /** Liste des tailles des 4 types de colonnes */
     public enum Size{
@@ -63,7 +69,7 @@ public class Relation {
         colonne = infoColonne.size();
     }
 
-    public Relation(String nom, List<InfoColonne<String, String>> infoColonne, PageID headerPageId, int nbCasesParPage, DiskManager diskManager, BufferManager bufferManager) throws Exception {
+    public Relation(String nom, List<InfoColonne<String, String>> infoColonne, PageID headerPageId, int nbCasesParPage, DiskManager diskManager, BufferManager bufferManager, List<PageID> pagesLibres, List<PageID> pagesPleines) throws Exception {
 
     this.nom = nom;
 
@@ -83,6 +89,8 @@ public class Relation {
     this.nbCasesParPage = nbCasesParPage;
     this.diskManager = diskManager;
     this.bufferManager = bufferManager;
+    this.pagesLibres = pagesLibres;
+    this.pagesPleines = pagesPleines;
     }
 
 
@@ -239,13 +247,50 @@ public class Relation {
     record.setValeurs(valeurs);
     }
 
-    public void addDataPage(){
+    public void addDataPage() {
+        PageID pid = bufferManager.allocPage();
 
+        if (pid == null) {
+            System.err.println("Impossible d'allouer une nouvelle page pour la relation " + nom);
+            return;
+        }
+        pagesLibres.add(pid);
     }
 
-    public PageID getFreeDataPageId(int sizeRecord){
+    private boolean isSlotUsed(ByteBuffer buff, int slot) {
+        int byteIndex = slot / 8;
+        int bitIndex = slot % 8;
 
+        byte b = buff.get(1 + byteIndex);
+        return ((b >> bitIndex) & 1) == 1;
     }
+
+    private boolean pageHasEnoughSpace(ByteBuffer buff) {
+        buff.rewind();
+
+        int nbSlots = buff.get(0);
+
+        for (int slot = 0; slot < nbSlots; slot++) {
+            if (!isSlotUsed(buff, slot)) {
+                return true; 
+            }
+        }
+
+        return false;
+    }
+
+    public PageID getFreeDataPageId(int sizeRecord) {
+        for (PageID pid : pagesLibres) {
+            ByteBuffer buff = bufferManager.getPage(pid);
+            if (pageHasEnoughSpace(buff)) {
+                bufferManager.FreePage(pid, false);
+                return pid;
+            }
+            bufferManager.FreePage(pid, false);
+        }
+        return null;
+    }
+
 
     public RecordId writeRecordToDataPage(Record record, PageID pageId){
 
