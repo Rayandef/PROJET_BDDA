@@ -289,13 +289,103 @@ public class Relation {
         }
     }
 
+    public int getRecordSize() {
+    int size = 0;
+
+    for (InfoColonne<String, String> info : infoColonne) {
+        switch (info.getType()) {
+            case "INT":
+                size += 4;
+                break;
+            case "FLOAT":
+                size += 4;
+                break;
+            case "CHAR":
+                size += Size.CHAR.getTaille();
+                break;
+            case "VARCHAR":
+                // stratégie TP : VARCHAR(T) = 4 bytes length + T bytes data
+                size += 4 + Size.VARCHAR.getTaille();
+                break;
+                }
+            }
+        return size;
+    }
+
 
     public RecordId writeRecordToDataPage(Record record, PageID pageId){
+        try {
+        // Récupération du buffer de la page
+        ByteBuffer buffer = bufferManager.getPage(pageId);
 
+        // Lecture des informations de gestion de la page
+        int freeSpace = buffer.getInt(0);        // espace libre restant
+        int nbRecords = buffer.getInt(4);        // nombre d'enregistrements actuellement dans la page
+
+        // Taille fixe d’un record
+        int recordSize = getRecordSize();
+
+        // Calcul de l’offset d’écriture : après les records existants
+        int pos = 8 + nbRecords * recordSize;
+
+        // Écriture du record dans le buffer
+        writeRecordToBuffer(record, buffer, pos);
+
+        // Mise à jour du nombre de records
+        nbRecords++;
+        buffer.putInt(4, nbRecords);
+
+        // Mise à jour de l’espace libre restant
+        freeSpace -= recordSize;
+        buffer.putInt(0, freeSpace);
+
+        // Création du RecordId
+        RecordId rid = new RecordId(pageId, nbRecords - 1);
+
+        // Libération de la page (dirty = true car modifiée)
+        bufferManager.FreePage(pageId, true);
+
+        return rid;
+
+    } catch (Exception e) {
+        e.printStackTrace();
+        return null;
+        }
     }
 
     public ArrayList<Record> getRecordsInDataPage(PageID pageId){
+        ArrayList<Record> records = new ArrayList<>();
 
+    try {
+        // Récupération de la page en mémoire
+        ByteBuffer buffer = bufferManager.getPage(pageId);
+
+        // Lecture des valeurs d'entête
+        int freeSpace = buffer.getInt(0); //lu pour le faire passer
+        int nbRecords = buffer.getInt(4);
+
+        int recordSize = getRecordSize();
+
+        // Offset où commencent les records
+        int pos = 8;
+
+        // Lire chaque record
+        for (int i = 0; i < nbRecords; i++) {
+            Record r = new Record();
+            readFromBuffer(r, buffer, pos);
+            records.add(r);
+
+            pos += recordSize;
+        }
+
+        // Libération de la page après lecture (dirty = false)
+        bufferManager.FreePage(pageId, false);
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+
+    return records;
     }
 
     public List<PageID> getDataPages(){
