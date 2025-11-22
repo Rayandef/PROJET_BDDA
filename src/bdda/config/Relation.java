@@ -32,6 +32,12 @@ public class Relation {
     /** Référence vers le BufferManager */
     private BufferManager bufferManager;
 
+    /** Liste des pages ayant encore de la place */
+    private List<PageID> pagesLibres = new ArrayList<>();
+
+    /** Liste des pages pleines */
+    private List<PageID> pagesPleines = new ArrayList<>();
+
 
     /** Liste des tailles des 4 types de colonnes */
     public enum Size{
@@ -63,7 +69,7 @@ public class Relation {
         colonne = infoColonne.size();
     }
 
-    public Relation(String nom, List<InfoColonne<String, String>> infoColonne, PageID headerPageId, int nbCasesParPage, DiskManager diskManager, BufferManager bufferManager) throws Exception {
+    public Relation(String nom, List<InfoColonne<String, String>> infoColonne, PageID headerPageId, int nbCasesParPage, DiskManager diskManager, BufferManager bufferManager, List<PageID> pagesLibres, List<PageID> pagesPleines) throws Exception {
 
     this.nom = nom;
 
@@ -83,6 +89,8 @@ public class Relation {
     this.nbCasesParPage = nbCasesParPage;
     this.diskManager = diskManager;
     this.bufferManager = bufferManager;
+    this.pagesLibres = pagesLibres;
+    this.pagesPleines = pagesPleines;
     }
 
 
@@ -477,6 +485,7 @@ public class Relation {
         }
         return allocateAndRegisterDataPage();
     }
+
 
     public RecordId writeRecordToDataPage(Record record, PageID pageId){
         if (record == null || pageId == null || bufferManager == null) {
