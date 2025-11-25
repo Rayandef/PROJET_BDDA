@@ -10,6 +10,7 @@ import java.util.List;
  */
 public class Relation {
 
+
     /** Nom de la relation */
     private String nom;
 
@@ -18,13 +19,6 @@ public class Relation {
 
     /** Info de chaque colonne */
     private List<InfoColonne<String, String>> infoColonne;
-
-    /** Ajout de variables TP5 **/
-    private PageID headerPageId;
-    private int nbSlotsParPage;
-    private DiskManager diskManager;
-    private BufferManager bufferManager;
-
 
     /** Liste des tailles des 4 types de colonnes */
     public enum Size{
@@ -79,7 +73,6 @@ public class Relation {
         }
         return taille;
     }
-
 
     /**
      * Récupère le nombre de colonnes
@@ -233,4 +226,73 @@ public class Relation {
 
     record.setValeurs(valeurs);
     }
+
+    public void addDataPage() {
+        PageID pid = bufferManager.allocPage();
+
+        if (pid == null) {
+            System.err.println("Impossible d'allouer une nouvelle page pour la relation " + nom);
+            return;
+        }
+        pagesLibres.add(pid);
+    }
+
+    public PageID getFreeDataPageId(int sizeRecord) {
+        try {
+            ByteBuffer headerBuffer = bufferManager.getPage(headerPageId);
+
+            int nbPages = headerBuffer.getInt(0);
+            for (int i = 0; i < nbPages; i++) {
+                int offset = 4 + i * 8;
+                int fileIdx = headerBuffer.getInt(offset);
+                int pageIdx = headerBuffer.getInt(offset + 4);
+                PageID pageID = new PageID(fileIdx, pageIdx);
+
+                ByteBuffer dataBuffer = bufferManager.getPage(pageID);
+
+                int espaceLibre = dataBuffer.getInt(0);
+
+                if (espaceLibre >= sizeRecord) {
+                    bufferManager.FreePage(pageID, false);
+                    bufferManager.FreePage(headerPageId, false);
+                    return pageID;
+                }
+                bufferManager.FreePage(pageID, false);
+            }
+
+            bufferManager.FreePage(headerPageId, false);
+            return null;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+
+    public RecordId writeRecordToDataPage(Record record, PageID pageId){
+
+    }
+
+    public ArrayList<Record> getRecordsInDataPage(PageID pageId){
+
+    }
+
+    public List<PageID> getDataPages(){
+
+    }
+
+    public RecordId insertRecord(Record record){
+
+    }
+
+    public ArrayList<Record> getAllRecords(){
+
+    }
+
+    public void deleteRecord(RecordId rid){
+
+    }
+
+
 }
