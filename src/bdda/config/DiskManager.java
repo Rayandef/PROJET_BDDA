@@ -42,7 +42,7 @@ public class DiskManager {
         try {
             // vérifie s'il existe une page libre
             if(!pagesLibres.isEmpty()){
-                return pagesLibres.removeLast();
+                return pagesLibres.remove(pagesLibres.size() - 1);
             }
 
             // récupère la liste des fichiers existants
@@ -67,7 +67,7 @@ public class DiskManager {
             long pageSize = dbConfig.getPageSize();
             long nbPages = destinationFile.length() / pageSize;
             // si fichier rempli -> création nouveau fichier
-            if (destinationFile.length() >= 544 ) { // revoir cette condition car inconnu sur la taille max d'un fichier
+            if (destinationFile.length() >= 1024 ) { // revoir cette condition car inconnu sur la taille max d'un fichier
                 fileIdx++;
                 // vérifie si le nombre max de fichier est atteint
                 if (fileIdx >= dbConfig.getDm_maxfilecount()) {
