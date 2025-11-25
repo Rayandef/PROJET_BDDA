@@ -1,6 +1,7 @@
 package bdda.config;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DBManager {
@@ -9,7 +10,7 @@ public class DBManager {
     private Map<String, Relation> tables;
 
     public DBManager(DBConfig dbConfig){
-        this.config = config;
+        this.config = dbConfig;
         this.tables = new HashMap<>();   
     
     }
@@ -17,29 +18,32 @@ public class DBManager {
     /**
      * Ajoute une table dans la base
      */
-    public void addTable(Relation tab){
-
+    public void AddTable(Relation tab) {
+        tables.put(tab.getNom(), tab);
     }
+
 
     /**
      * Renvoie la table correspondant à nomTable
      */
     public Relation getTable(String nomTab){
-
+        return tables.get(nomTab);
     }
 
     /**
      * Supprime une table à partir de son nom
      */
     public void removeTable(String nomTable){
-
+        
     }
 
     /**
      * Supprime toutes les tables de la base
      */
     public void removeAllTable(){
-
+        for(String tab : this.tables.keySet()){
+            removeTable(tab);
+        }
     }
 
     /**
@@ -53,7 +57,9 @@ public class DBManager {
      * Affiche le schéma de toutes les tables
      */
     public void describeAllTable(){
-
+        for(String tab: this.tables.keySet()){
+            removeTable(tab);
+        }
     }
 
     /**
