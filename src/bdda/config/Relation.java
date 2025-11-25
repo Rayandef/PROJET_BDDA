@@ -32,13 +32,6 @@ public class Relation {
     /** Référence vers le BufferManager */
     private BufferManager bufferManager;
 
-    /** Liste des pages ayant encore de la place */
-    private List<PageID> pagesLibres = new ArrayList<>();
-
-    /** Liste des pages pleines */
-    private List<PageID> pagesPleines = new ArrayList<>();
-
-
     /** Liste des tailles des 4 types de colonnes */
     public enum Size{
         INT(4), FLOAT(4), CHAR(64), VARCHAR(64) ;
@@ -67,30 +60,38 @@ public class Relation {
             this.infoColonne = infoColonne;
         }
         colonne = infoColonne.size();
+        int pageSize = bufferManager.getDbConfig().getPageSize();
+        int recordSize = getRecordSlotSize();
+        int headerSize = getDataPageHeaderSize();
+        this.nbCasesParPage = (pageSize - headerSize) / recordSize;
     }
 
-    public Relation(String nom, List<InfoColonne<String, String>> infoColonne, PageID headerPageId, int nbCasesParPage, DiskManager diskManager, BufferManager bufferManager, List<PageID> pagesLibres, List<PageID> pagesPleines) throws Exception {
-
-    this.nom = nom;
-
-    for (InfoColonne<String, String> info : infoColonne) {
-        if (!(info.getType().equals("INT") ||
-              info.getType().equals("FLOAT") ||
-              info.getType().equals("CHAR") ||
-              info.getType().equals("VARCHAR"))) {
-            throw new Exception("L'élément " + (infoColonne.indexOf(info) + 1) + " est incorrect");
+    public Relation(String nom, List<InfoColonne<String, String>> infoColonne, PageID headerPageId, DiskManager diskManager, BufferManager bufferManager) throws Exception {
+        this.nom = nom;
+        for (InfoColonne<String, String> info : infoColonne) {
+            if (!(info.getType().equals("INT") ||
+                info.getType().equals("FLOAT") ||
+                info.getType().equals("CHAR") ||
+                info.getType().equals("VARCHAR"))) {
+                throw new Exception("L'élément " + (infoColonne.indexOf(info) + 1) + " est incorrect");
+            }
         }
-    }
 
-    this.infoColonne = infoColonne;
-    this.colonne = infoColonne.size();
+        this.infoColonne = infoColonne;
+        this.colonne = infoColonne.size();
 
-    this.headerPageId = headerPageId;
-    this.nbCasesParPage = nbCasesParPage;
-    this.diskManager = diskManager;
-    this.bufferManager = bufferManager;
-    this.pagesLibres = pagesLibres;
-    this.pagesPleines = pagesPleines;
+        this.headerPageId = headerPageId;
+        this.diskManager = diskManager;
+        this.bufferManager = bufferManager;
+        int pageSize = bufferManager.getDbConfig().getPageSize();
+        int recordSize = getRecordSlotSize();
+        int slotTotalSize = 1 + recordSize; // 1 octet pour état + taille du record
+        this.nbCasesParPage = (pageSize - Integer.BYTES) / slotTotalSize; // Integer.BYTES = header pour usedSlots
+
+        if (this.nbCasesParPage <= 0) {
+            System.out.println("pageSize=" + pageSize + ", recordSize=" + recordSize + ", nbCasesParPage calculé=" + ((pageSize - Integer.BYTES)/(recordSize+1)));
+            throw new Exception("La page est trop petite pour stocker un record !");
+        }
     }
 
 
@@ -132,7 +133,7 @@ public class Relation {
      */
     public void setInfoColonne(List<InfoColonne<String, String>> infoColonne) throws Exception{
         for(InfoColonne<String, String> info : infoColonne){
-            if(info.getType() != "INT" || info.getType() != "FLOAT" || info.getType() != "CHAR" || info.getType() != "VARCHAR"){
+            if(!(info.getType().equals("INT")) || !(info.getType().equals("FLOAT")) || !(info.getType().equals("CHAR")) || !(info.getType().equals("VARCHAR"))){
                 throw new Exception("L'élément " + (infoColonne.indexOf(info) + 1) + "de la liste est incorrecte");
             }
             this.infoColonne = infoColonne;
@@ -146,6 +147,18 @@ public class Relation {
      */
     public void setNom(String nom) {
         this.nom = nom;
+    }
+
+    public int getNbCasesParPage(){
+        return this.nbCasesParPage ;
+    }
+
+    public DiskManager getDiskManager(){
+        return this.diskManager ;
+    }
+
+    public BufferManager getBufferManager(){
+        return this.bufferManager ;
     }
 
 
@@ -394,7 +407,7 @@ public class Relation {
         }
     }
 
-    private void initHeaderPage(PageID headerId) {
+    public void initHeaderPage(PageID headerId) {
         if (bufferManager == null) {
             return;
         }
@@ -408,14 +421,13 @@ public class Relation {
         }
     }
 
-    private void registerDataPageInHeader(PageID dataPageId, int freeSlots) {
-        if (bufferManager == null || headerPageId == null) {
-            return;
-        }
+    private void registerDataPageInHeader(PageID dataPageId, int freeSlots) throws Exception {
+        if (bufferManager == null || headerPageId == null || dataPageId == null) return;
+
         PageID currentHeader = new PageID(headerPageId.getFileIdx(), headerPageId.getPageIdx());
+
         while (true) {
-            PageID headerToEdit = new PageID(currentHeader.getFileIdx(), currentHeader.getPageIdx());
-            ByteBuffer headerBuffer = bufferManager.getPage(headerToEdit);
+            ByteBuffer headerBuffer = bufferManager.getPage(currentHeader);
             int nbEntries = headerBuffer.getInt(0);
             int nextFileIdx = headerBuffer.getInt(Integer.BYTES);
             int nextPageIdx = headerBuffer.getInt(Integer.BYTES * 2);
@@ -425,42 +437,71 @@ public class Relation {
                 int offset = getHeaderEntryOffset(nbEntries);
                 headerBuffer.putInt(offset, dataPageId.getFileIdx());
                 headerBuffer.putInt(offset + Integer.BYTES, dataPageId.getPageIdx());
-                headerBuffer.putInt(offset + Integer.BYTES * 2, freeSlots);
+                headerBuffer.putInt(offset + 2 * Integer.BYTES, freeSlots);
                 headerBuffer.putInt(0, nbEntries + 1);
-                bufferManager.FreePage(headerToEdit, true);
+                bufferManager.FreePage(currentHeader, true);
+
+                System.out.println("=== DEBUG : DataPage enregistrée dans header ===");
+                System.out.println("DataPage : " + dataPageId + " | freeSlots : " + freeSlots);
                 return;
             }
 
             if (nextFileIdx < 0 || nextPageIdx < 0) {
                 PageID newHeader = bufferManager.allocPage();
+                    if (newHeader == null) {
+                        throw new Exception("Impossible d'allouer une nouvelle header page !");
+                    }
                 initHeaderPage(newHeader);
+
+
                 headerBuffer.putInt(Integer.BYTES, newHeader.getFileIdx());
-                headerBuffer.putInt(Integer.BYTES * 2, newHeader.getPageIdx());
-                bufferManager.FreePage(headerToEdit, true);
+                headerBuffer.putInt(2 * Integer.BYTES, newHeader.getPageIdx());
+                bufferManager.FreePage(currentHeader, true);
+
+                System.out.println("=== DEBUG : Nouveau header créé ===");
+                System.out.println("Nouveau header : " + newHeader);
+
                 currentHeader = newHeader;
             } else {
-                bufferManager.FreePage(headerToEdit, false);
+                bufferManager.FreePage(currentHeader, false);
                 currentHeader = new PageID(nextFileIdx, nextPageIdx);
             }
+            System.out.println("registerDataPageInHeader: currentHeader = " + currentHeader + ", nbEntries = " + nbEntries);
         }
     }
 
+
     private void initializeDataPage(PageID pageId) {
-        if (bufferManager == null) {
-            return;
-        }
+        if (bufferManager == null || pageId == null) return;
+
         ByteBuffer buffer = bufferManager.getPage(pageId);
         try {
             buffer.putInt(0, 0);
+
             for (int i = 0; i < nbCasesParPage; i++) {
                 buffer.put(Integer.BYTES + i, (byte) 0);
             }
+
+            int recordStart = Integer.BYTES + nbCasesParPage;
+            int totalRecordBytes = nbCasesParPage * getRecordSlotSize();
+            for (int i = 0; i < totalRecordBytes; i++) {
+                buffer.put(recordStart + i, (byte) 0);
+            }
+
+            System.out.println("=== DEBUG : Page initialisée ===");
+            System.out.println("PageID : " + pageId);
+            System.out.println("nbCasesParPage : " + nbCasesParPage);
+            System.out.println("RecordStart : " + recordStart);
+            System.out.println("TotalRecordBytes : " + totalRecordBytes);
+
         } finally {
             bufferManager.FreePage(pageId, true);
         }
     }
 
-    private PageID allocateAndRegisterDataPage() {
+
+
+    public PageID allocateAndRegisterDataPage() {
         if (bufferManager == null) {
             return null;
         }
@@ -469,7 +510,12 @@ public class Relation {
             return null;
         }
         initializeDataPage(newPage);
-        registerDataPageInHeader(newPage, nbCasesParPage);
+        try {
+            registerDataPageInHeader(newPage, nbCasesParPage);
+        } catch (Exception e) {
+            System.out.println(e);
+            e.printStackTrace();
+        }
         return newPage;
     }
 
@@ -482,6 +528,7 @@ public class Relation {
             if (entry.freeSlots > 0) {
                 return entry.dataPage;
             }
+            System.out.println("getFreeDataPageId: Checking header entries...");
         }
         return allocateAndRegisterDataPage();
     }
