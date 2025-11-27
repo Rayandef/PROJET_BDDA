@@ -440,9 +440,6 @@ public class Relation {
                 headerBuffer.putInt(offset + 2 * Integer.BYTES, freeSlots);
                 headerBuffer.putInt(0, nbEntries + 1);
                 bufferManager.FreePage(currentHeader, true);
-
-                System.out.println("=== DEBUG : DataPage enregistrée dans header ===");
-                System.out.println("DataPage : " + dataPageId + " | freeSlots : " + freeSlots);
                 return;
             }
 
@@ -457,16 +454,11 @@ public class Relation {
                 headerBuffer.putInt(Integer.BYTES, newHeader.getFileIdx());
                 headerBuffer.putInt(2 * Integer.BYTES, newHeader.getPageIdx());
                 bufferManager.FreePage(currentHeader, true);
-
-                System.out.println("=== DEBUG : Nouveau header créé ===");
-                System.out.println("Nouveau header : " + newHeader);
-
                 currentHeader = newHeader;
             } else {
                 bufferManager.FreePage(currentHeader, false);
                 currentHeader = new PageID(nextFileIdx, nextPageIdx);
             }
-            System.out.println("registerDataPageInHeader: currentHeader = " + currentHeader + ", nbEntries = " + nbEntries);
         }
     }
 
@@ -487,13 +479,6 @@ public class Relation {
             for (int i = 0; i < totalRecordBytes; i++) {
                 buffer.put(recordStart + i, (byte) 0);
             }
-
-            System.out.println("=== DEBUG : Page initialisée ===");
-            System.out.println("PageID : " + pageId);
-            System.out.println("nbCasesParPage : " + nbCasesParPage);
-            System.out.println("RecordStart : " + recordStart);
-            System.out.println("TotalRecordBytes : " + totalRecordBytes);
-
         } finally {
             bufferManager.FreePage(pageId, true);
         }
@@ -528,7 +513,6 @@ public class Relation {
             if (entry.freeSlots > 0) {
                 return entry.dataPage;
             }
-            System.out.println("getFreeDataPageId: Checking header entries...");
         }
         return allocateAndRegisterDataPage();
     }
