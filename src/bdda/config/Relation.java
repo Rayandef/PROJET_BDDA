@@ -640,5 +640,14 @@ public class Relation {
         }
     }
 
+    public ArrayList<PageID> getAllPages() {
+        ArrayList<PageID> pages = new ArrayList<>();
+        pages.add(headerPageId);
+        pages.addAll(getDataPages());
+        return pages;
+    }
+
+
+
 
 }

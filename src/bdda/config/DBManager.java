@@ -75,4 +75,9 @@ public class DBManager {
     public void loadState(){
 
     }
+
+    public Map<String, Relation> getTables() {
+        return tables;
+    }
+
 }
