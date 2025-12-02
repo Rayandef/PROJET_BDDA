@@ -9,75 +9,89 @@ public class DBManager {
     private DBConfig config;
     private Map<String, Relation> tables;
 
-    public DBManager(DBConfig dbConfig){
+    public DBManager(DBConfig dbConfig) {
         this.config = dbConfig;
-        this.tables = new HashMap<>();   
-    
+        this.tables = new HashMap<>();
     }
 
     /**
-     * Ajoute une table dans la base
+     * Ajoute une table dans la base.
      */
     public void AddTable(Relation tab) {
+        if (tab == null || tab.getNom() == null) {
+            return;
+        }
         tables.put(tab.getNom(), tab);
     }
 
-
     /**
-     * Renvoie la table correspondant à nomTable
+     * Renvoie la table correspondant à nomTable.
      */
-    public Relation getTable(String nomTab){
-        return tables.get(nomTab);
+    public Relation GetTable(String nomTable) {
+        if (nomTable == null) {
+            return null;
+        }
+        return tables.get(nomTable);
     }
 
     /**
-     * Supprime une table à partir de son nom
+     * Supprime une table à partir de son nom.
      */
-    public void removeTable(String nomTable){
-        
+    public void RemoveTable(String nomTable) {
+        if (nomTable == null) {
+            return;
+        }
+        tables.remove(nomTable);
     }
 
     /**
-     * Supprime toutes les tables de la base
+     * Supprime toutes les tables de la base.
      */
-    public void removeAllTable(){
-        for(String tab : this.tables.keySet()){
-            removeTable(tab);
+    public void RemoveAllTables() {
+        tables.clear();
+    }
+
+    /**
+     * Affiche le schéma d'une table.
+     */
+    public void DescribeTable(String nomTable) {
+        Relation relation = GetTable(nomTable);
+        if (relation == null) {
+            System.out.println("Table " + nomTable + " inexistante");
+            return;
+        }
+
+        System.out.println("Table : " + relation.getNom());
+        List<InfoColonne<String, String>> colonnes = relation.getInfoColonne();
+        for (InfoColonne<String, String> info : colonnes) {
+            System.out.println(" - " + info.getNom() + " (" + info.getType() + ")");
         }
     }
 
     /**
-     * Affiche le schéma d’une table
+     * Affiche le schéma de toutes les tables.
      */
-    public void describeTable(String nomTable){
-
-    }
-
-    /**
-     * Affiche le schéma de toutes les tables
-     */
-    public void describeAllTable(){
-        for(String tab: this.tables.keySet()){
-            removeTable(tab);
+    public void DescribeAllTables() {
+        for (String tab : tables.keySet()) {
+            DescribeTable(tab);
         }
     }
 
     /**
-     * Sauvegarde de l’état de la base
+     * Sauvegarde de l'état de la base.
      */
-    public void saveState(){
+    public void saveState() {
 
     }
 
     /**
-     * Chargement de l’état de la base
+     * Chargement de l'état de la base.
      */
-    public void loadState(){
+    public void loadState() {
 
     }
 
     public Map<String, Relation> getTables() {
         return tables;
     }
-
 }
