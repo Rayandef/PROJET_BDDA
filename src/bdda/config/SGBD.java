@@ -104,14 +104,14 @@ public class SGBD {
     private void ProcessDropTableCommand(String cmd) {
         String nom = cmd.replace("DROP TABLE", "").trim();
 
-        Relation rel = dbManager.getTable(nom);
+        Relation rel = dbManager.GetTable(nom);
         if (rel == null) return;
 
         for (PageID p : rel.getAllPages()) {
             diskManager.deAllocPage(p);
         }
 
-        dbManager.removeTable(nom);
+        dbManager.RemoveTable(nom);
 
         System.out.println("TABLE " + nom + " DROPPED");
     }
@@ -120,7 +120,7 @@ public class SGBD {
     private void ProcessDropAllTablesCommand() {
 
         for (String nom : new ArrayList<>(dbManager.getTables().keySet())) {
-            Relation rel = dbManager.getTable(nom);
+            Relation rel = dbManager.GetTable(nom);
             if (rel != null) {
                 for (PageID p : rel.getAllPages()) {
                     diskManager.deAllocPage(p);
@@ -128,7 +128,7 @@ public class SGBD {
             }
         }
 
-        dbManager.removeAllTable();
+        dbManager.RemoveAllTables();
 
         System.out.println("ALL TABLES DROPPED");
     }
@@ -136,12 +136,12 @@ public class SGBD {
 
     private void ProcessDescribeTableCommand(String cmd) {
         String nom = cmd.replace("DESCRIBE TABLE", "").trim();
-        dbManager.describeTable(nom);
+        dbManager.DescribeTable(nom);
     }
 
 
     private void ProcessDescribeAllTablesCommand() {
-        dbManager.describeAllTable();
+        dbManager.DescribeAllTables();
     }
 
 
