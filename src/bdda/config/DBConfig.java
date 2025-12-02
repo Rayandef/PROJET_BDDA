@@ -14,7 +14,7 @@ public class DBConfig {
     private int dm_maxfilecount;
     /**dm_buffercount -> variable indiquant le nombre de buffers gérés par le BufferManager */
     private int bm_buffercount;
-    /**bm_policy -> variable indiquant la polotique de remplacement */
+    /**bm_policy -> variable indiquant la politique de remplacement */
     private String bm_policy;
 
     /**
