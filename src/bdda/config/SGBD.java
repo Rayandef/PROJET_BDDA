@@ -57,6 +57,7 @@ public class SGBD {
     private void ProcessExitCommand() {
         dbManager.saveState();
         bufferManager.FlushBuffers();
+        diskManager.finish();
         System.out.println("EXIT");
     }
 
