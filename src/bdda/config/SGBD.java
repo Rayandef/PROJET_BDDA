@@ -3,13 +3,6 @@ package bdda.config;
 import java.util.ArrayList;
 import java.util.Scanner;
 
-import bdda.config.DBConfig;
-import bdda.config.DBManager;
-import bdda.config.DiskManager;
-import bdda.config.BufferManager;
-import bdda.config.InfoColonne;
-import bdda.config.PageID;
-import bdda.config.Relation;
 
 public class SGBD {
 
@@ -27,7 +20,7 @@ public class SGBD {
         diskManager.init();
         bufferManager.init();
 
-        dbManager.LoadState();
+        dbManager.loadState();
     }
 
     public void Run() {
@@ -62,7 +55,7 @@ public class SGBD {
 
 
     private void ProcessExitCommand() {
-        dbManager.SaveState();
+        dbManager.saveState();
         bufferManager.FlushBuffers();
         System.out.println("EXIT");
     }
@@ -91,7 +84,7 @@ public class SGBD {
             Relation rel = new Relation(tableName, colonnes, header, diskManager, bufferManager);
             rel.initHeaderPage(header);
 
-            dbManager.AddTable(rel);
+            dbManager.addTable(rel);
 
             System.out.println("TABLE " + tableName + " CREATED");
 
@@ -104,14 +97,14 @@ public class SGBD {
     private void ProcessDropTableCommand(String cmd) {
         String nom = cmd.replace("DROP TABLE", "").trim();
 
-        Relation rel = dbManager.GetTable(nom);
+        Relation rel = dbManager.getTable(nom);
         if (rel == null) return;
 
         for (PageID p : rel.getAllPages()) {
             diskManager.deAllocPage(p);
         }
 
-        dbManager.RemoveTable(nom);
+        dbManager.removeTable(nom);
 
         System.out.println("TABLE " + nom + " DROPPED");
     }
@@ -120,7 +113,7 @@ public class SGBD {
     private void ProcessDropAllTablesCommand() {
 
         for (String nom : new ArrayList<>(dbManager.getTables().keySet())) {
-            Relation rel = dbManager.GetTable(nom);
+            Relation rel = dbManager.getTable(nom);
             if (rel != null) {
                 for (PageID p : rel.getAllPages()) {
                     diskManager.deAllocPage(p);
@@ -128,7 +121,7 @@ public class SGBD {
             }
         }
 
-        dbManager.RemoveAllTables();
+        dbManager.removeAllTables();
 
         System.out.println("ALL TABLES DROPPED");
     }
@@ -136,12 +129,12 @@ public class SGBD {
 
     private void ProcessDescribeTableCommand(String cmd) {
         String nom = cmd.replace("DESCRIBE TABLE", "").trim();
-        dbManager.DescribeTable(nom);
+        dbManager.describeTable(nom);
     }
 
 
     private void ProcessDescribeAllTablesCommand() {
-        dbManager.DescribeAllTables();
+        dbManager.describeAllTables();
     }
 
 

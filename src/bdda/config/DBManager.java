@@ -32,7 +32,7 @@ public class DBManager {
     /**
      * Ajoute une table dans la base.
      */
-    public void AddTable(Relation tab) {
+    public void addTable(Relation tab) {
         if (tab == null || tab.getNom() == null) {
             return;
         }
@@ -42,7 +42,7 @@ public class DBManager {
     /**
      * Renvoie la table correspondant a nomTable.
      */
-    public Relation GetTable(String nomTable) {
+    public Relation getTable(String nomTable) {
         if (nomTable == null) {
             return null;
         }
@@ -52,7 +52,7 @@ public class DBManager {
     /**
      * Supprime une table a partir de son nom.
      */
-    public void RemoveTable(String nomTable) {
+    public void removeTable(String nomTable) {
         if (nomTable == null) {
             return;
         }
@@ -62,15 +62,15 @@ public class DBManager {
     /**
      * Supprime toutes les tables de la base.
      */
-    public void RemoveAllTables() {
+    public void removeAllTables() {
         tables.clear();
     }
 
     /**
      * Affiche le schema d'une table.
      */
-    public void DescribeTable(String nomTable) {
-        Relation relation = GetTable(nomTable);
+    public void describeTable(String nomTable) {
+        Relation relation = getTable(nomTable);
         if (relation == null) {
             System.out.println("Table " + nomTable + " inexistante");
             return;
@@ -86,9 +86,9 @@ public class DBManager {
     /**
      * Affiche le schema de toutes les tables.
      */
-    public void DescribeAllTables() {
+    public void describeAllTables() {
         for (String tab : tables.keySet()) {
-            DescribeTable(tab);
+            describeTable(tab);
         }
     }
 
@@ -97,7 +97,7 @@ public class DBManager {
      * Format simple: tableName|fileIdx:pageIdx|colName:colType,colName:colType
      * Fichier: database.save dans dbpath.
      */
-    public void SaveState() {
+    public void saveState() {
         File dir = new File(config.getDbpath());
         if (!dir.exists()) {
             dir.mkdirs();
@@ -130,7 +130,7 @@ public class DBManager {
     /**
      * Chargement de l'etat de la base depuis database.save.
      */
-    public void LoadState() {
+    public void loadState() {
         if (diskManager == null || bufferManager == null) {
             return;
         }
