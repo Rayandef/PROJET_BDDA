@@ -22,12 +22,12 @@ public class SGBD {
         this.config = config;
         this.diskManager = new DiskManager(config);
         this.bufferManager = new BufferManager(config, diskManager);
-        this.dbManager = new DBManager(config);
+        this.dbManager = new DBManager(config, diskManager, bufferManager);
 
         diskManager.init();
         bufferManager.init();
 
-        dbManager.loadState();
+        dbManager.LoadState();
     }
 
     public void Run() {
@@ -62,7 +62,7 @@ public class SGBD {
 
 
     private void ProcessExitCommand() {
-        dbManager.saveState();
+        dbManager.SaveState();
         bufferManager.FlushBuffers();
         System.out.println("EXIT");
     }

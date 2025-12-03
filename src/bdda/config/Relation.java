@@ -153,6 +153,10 @@ public class Relation {
         return this.nbCasesParPage ;
     }
 
+    public PageID getHeaderPageId() {
+        return this.headerPageId;
+    }
+
     public DiskManager getDiskManager(){
         return this.diskManager ;
     }
