@@ -73,11 +73,11 @@ public class DBConfig {
     /**Créer une configuaration par défaut */
     public DBConfig(){
         DBConfig defaultConfig = DBConfig.loadDBConfig("config"+File.separator+"dbconfig.properties"); 
-        this.dbpath = defaultConfig.getDbpath();
-        this.pageSize = defaultConfig.getPageSize();
-        this.dm_maxfilecount = defaultConfig.getDm_maxfilecount();
-        this.bm_buffercount = defaultConfig.getBm_buffercount();
-        this.bm_policy = getBm_policy();
+        this.dbpath = defaultConfig.dbpath;
+        this.pageSize = defaultConfig.pageSize;
+        this.dm_maxfilecount = defaultConfig.dm_maxfilecount;
+        this.bm_buffercount = defaultConfig.bm_buffercount;
+        this.bm_policy = defaultConfig.bm_policy;
 
     }
 
