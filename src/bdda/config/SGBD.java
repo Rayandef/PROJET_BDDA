@@ -3,6 +3,8 @@ package bdda.config;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+import bdda.config.Relation.Size;
+
 
 public class SGBD {
 
@@ -76,7 +78,8 @@ public class SGBD {
                 String[] parts = f.split(":");
                 InfoColonne<String, String> col = new InfoColonne<>();
                 col.setNom(parts[0]);
-                col.setType(parts[1]);
+                col.setType(parts[1].split("\\(")[0]);
+                Size.valueOf(col.getType()).setTaille(Integer.parseInt(parts[1].split("\\(")[1].split("\\)")[0]));
                 colonnes.add(col);
             }
 

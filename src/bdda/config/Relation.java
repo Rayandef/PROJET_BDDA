@@ -36,7 +36,8 @@ public class Relation {
     public enum Size{
         INT(4), FLOAT(4), CHAR(64), VARCHAR(64) ;
 
-        private final int taille ;
+        private int taille ;
+        private static final int LIMITE = 64 ;
 
         private Size(int taille){
             this.taille = taille ;
@@ -44,6 +45,16 @@ public class Relation {
 
         public int getTaille(){
             return this.taille ;
+        }
+
+        public void setTaille(int taille){
+            if (verifTaille(taille)){
+                this.taille = taille ;
+            }
+        }
+
+        private boolean verifTaille(int taille){
+            return (taille <= LIMITE)? true : false ;
         }
     }
 
