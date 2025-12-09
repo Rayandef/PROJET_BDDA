@@ -72,11 +72,13 @@ public class DBConfig {
 
     /**Créer une configuaration par défaut */
     public DBConfig(){
-        this.dbpath = "."+ File.separator+"DB"+File.separator+"binData";
-        this.pageSize = 256;
-        this.dm_maxfilecount = 512;
-        this.bm_buffercount = 20;
-        this.bm_policy = "LRU";
+        DBConfig defaultConfig = DBConfig.loadDBConfig("config"+File.separator+"dbconfig.properties"); 
+        this.dbpath = defaultConfig.getDbpath();
+        this.pageSize = defaultConfig.getPageSize();
+        this.dm_maxfilecount = defaultConfig.getDm_maxfilecount();
+        this.bm_buffercount = defaultConfig.getBm_buffercount();
+        this.bm_policy = getBm_policy();
+
     }
 
     /**
