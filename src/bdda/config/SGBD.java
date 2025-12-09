@@ -137,21 +137,4 @@ public class SGBD {
     private void ProcessDescribeAllTablesCommand() {
         dbManager.describeAllTables();
     }
-
-
-    public static void main(String[] args) {
-        if (args.length != 1) {
-            System.out.println("ERREUR : Il faut un fichier de configuration.");
-            return;
-        }
-
-        DBConfig conf = DBConfig.loadDBConfig(args[0]);
-        if (conf == null) {
-            System.out.println("Erreur : fichier config invalide.");
-            return;
-        }
-
-        SGBD sgbd = new SGBD(conf);
-        sgbd.Run();
-    }
 }

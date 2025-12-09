@@ -22,9 +22,6 @@ public class DBConfig {
      * @throws Exception
      */
     public DBConfig(String dbpath) throws Exception{
-        if(!dbpath.equals("." + File.separator + "DB" + File.separator + "binData")){
-            throw new Exception("dbpath incorrect");
-        }
         this.dbpath = dbpath;
         this.pageSize = 256;
         this.dm_maxfilecount = 512;
@@ -133,12 +130,16 @@ public class DBConfig {
             int dm_maxfilecount = Integer.parseInt(props.getProperty("dm_maxfilecount"));
             int bm_buffercount = Integer.parseInt(props.getProperty("bm_buffercount"));
             String bm_policy = props.getProperty("bm_policy");
-            config = new DBConfig(dbpath, pageSize, dm_maxfilecount, bm_buffercount, bm_policy);
-
+            config = new DBConfig(convertirFileSeparator(dbpath), pageSize, dm_maxfilecount, bm_buffercount, bm_policy);
         } catch (Exception e) {
             System.out.println("Erreur lecture config: " + e.getMessage());
         }
         return config;
+    }
+
+    private static String convertirFileSeparator(String dbpath){
+        String [] temp = dbpath.split("/");
+        return temp[0] + File.separator + temp[1] + File.separator + temp[2];
     }
 
     /**
