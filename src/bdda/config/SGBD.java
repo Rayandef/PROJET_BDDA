@@ -1,6 +1,9 @@
 package bdda.config;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Scanner;
 
 import bdda.config.Relation.Size;
@@ -49,6 +52,9 @@ public class SGBD {
             }
             else if (command.startsWith("DESCRIBE TABLE")) {
                 ProcessDescribeTableCommand(command);
+            }
+            else {
+                System.out.println("Commande inconnue : " + command);
             }
         }
 
@@ -140,4 +146,74 @@ public class SGBD {
     private void ProcessDescribeAllTablesCommand() {
         dbManager.describeAllTables();
     }
+
+
+    //Méthode qui vérifie si une commande contient un alias
+    private boolean contientAlias(String command){
+        //Séparer la commande en éléments
+        String[] elements = command.split(" ");
+        //parcourir les éléments et vérifier si l'un d'eux est un nom de table existant
+        for(String element : elements){
+            if(dbManager.getTables().containsKey(element)){
+                return true; // un alias est présent
+            }
+        }
+        return false;
+    }
+
+    //méthode qui gère les alias dans une commande et retourne une map des alias contenant le nom de l'alias et la relation correspondante
+    private HashMap<String, Relation> extraireAlias(String commande){
+        if(!contientAlias(commande)){
+            return null; //pas d'alias
+        }
+        HashMap<String, Relation> aliasMap = new HashMap<>();
+        String[] elements = commande.split(" ");//On sépare la commande en éléments
+        for(int i=0; i<elements.length-1; i++){ //on parcourt les éléments
+            String t1 = elements[i];
+            String t2 = elements[i+1];
+            if(dbManager.getTable(t1)!=null){ //si l'élément est un nom de table existant
+                aliasMap.put(t2, dbManager.getTable(t1)); //on ajoute l'alias et la relation correspondante à la map
+            }
+        }
+        return aliasMap;
+    }
+
+
+    //Méthode qui vérifie si une commande contient une condition
+    private boolean contientCondition(String command){
+        String[] elements = command.split(" ");
+        for(String element : elements){
+            if(element.equalsIgnoreCase("WHERE")){
+                return true; // une condition est présente
+            }
+        }
+        return false;
+    }
+
+    //Méthode qui extrait les conditions d'une commande et les retourne sous forme d'une liste d'objets Condition
+    private ArrayList<Condition> extraireConditions(String command){
+        ArrayList<Condition> conditions = new ArrayList<>();
+        final String[] OPERATEURS = {"<=", ">=", "<>", "=", "<", ">"};
+        if(!contientCondition(command)){
+            return null; //pas de conditions
+        }
+        String wherePart = command.split("WHERE")[1].trim(); //on récupère la partie après WHERE
+        String[] conds = wherePart.split("AND"); //on sépare les conditions par AND
+        for(String cond : conds){
+            cond = cond.trim();
+            for(String op : OPERATEURS){
+                if(cond.contains(op)){
+                    String[] parts = cond.split(op);
+                    String gauche = parts[0].trim();
+                    String droite = parts[1].trim();
+                    Condition condition = new Condition(gauche, droite, op);
+                    // Remplir l'objet condition avec les informations extraites
+                    conditions.add(condition);
+                    break;
+                }
+            }
+        }
+        return conditions;
+    }
+
 }
