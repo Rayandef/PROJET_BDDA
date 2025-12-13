@@ -1,10 +1,8 @@
 package bdda.config;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import bdda.config.Relation.Size;
 
 
 public class Condition {
@@ -96,9 +94,7 @@ public class Condition {
     }
 
     //méthode qui évalue une condition et retourne les valeurs correspondantes à la colonne de gauche si la condition est satisfaite
-    public ArrayList<String> evaluerCondition(
-        Condition condition,
-        HashMap<String, Relation> aliasMap) {
+    public ArrayList<String> evaluerCondition(Condition condition, HashMap<String, Relation> aliasMap) {
 
         ArrayList<String> resultats = new ArrayList<>();
 
@@ -156,12 +152,12 @@ public class Condition {
     }
 
     //Méthode qui compare deux objets en fonction de l'opérateur
-    private boolean comparer(Object g, Object d, String op) {
+    private boolean comparer(Object gauche, Object droite, String op) {
 
         // INT ou FLOAT
-        if (g instanceof Number && d instanceof Number) {
-            double a = ((Number) g).doubleValue();
-            double b = ((Number) d).doubleValue();
+        if (gauche instanceof Number && droite instanceof Number) {
+            double a = ((Number) gauche).doubleValue();
+            double b = ((Number) droite).doubleValue();
 
             switch (op) {
                 case "=":  return a == b;
@@ -174,8 +170,8 @@ public class Condition {
         }
 
         // CHAR ou VARCHAR
-        String s1 = g.toString();
-        String s2 = d.toString();
+        String s1 = gauche.toString();
+        String s2 = droite.toString();
 
         switch (op) {
             case "=":  return s1.equals(s2);
@@ -189,5 +185,44 @@ public class Condition {
         return false;
     }
 
+    //méthode qui récupère les informations d'une colonne donnée dans une relation associée à un terme (ex: Tab2.AA renvoie les infos de la colonne AA dans la relation Tab2)
+    public InfoColonne<String, String> recupererColonne(String terme, HashMap<String, Relation> aliasMap) {
+        //separee le terme en alias et nom de colonne
+        String[] parties = terme.split("\\.");
+        String nomColonne = parties[1];
+        //recupere la relation associée
+        Relation rel = recupererRelation(terme, aliasMap);
+        if (rel == null) return null;
+        //parcourt les colonnes de la relation pour trouver la colonne correspondante
+        for (InfoColonne<String, String> col : rel.getInfoColonne()) {
+            if (col.getNom().equalsIgnoreCase(nomColonne)) {
+                return col;
+            }
+        }
+
+        return null;
+    }
+
+    //méthode qui évalue une condition pour un index donné
+    public boolean evaluerConditionIndex(
+        int index,
+        HashMap<String, Relation> aliasMap) {
+
+        String termeGauche = gauche;
+        String termeDroite = droite;
+
+        // Récupère et convertit la valeur de gauche
+        Object valeurGauche = convertirValeur(recupererValeursColonne(termeGauche, aliasMap).get(index), recupererColonne(termeGauche, aliasMap));
+
+        Object valeurDroite;
+        //Si le terme de droite est une colonne
+        if (termeDroite.contains(".")) {
+            valeurDroite = convertirValeur(recupererValeursColonne(termeDroite, aliasMap).get(index),recupererColonne(termeDroite, aliasMap)); // Récupère et convertit la valeur de droite
+        } else {
+            valeurDroite = convertirValeur(termeDroite.replace("'", ""), recupererColonne(termeGauche, aliasMap)); // Sinon c'est une constante
+        }
+
+        return comparer(valeurGauche, valeurDroite, operateur);
+    }
 
 }

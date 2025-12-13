@@ -53,6 +53,9 @@ public class SGBD {
             else if (command.startsWith("DESCRIBE TABLE")) {
                 ProcessDescribeTableCommand(command);
             }
+            else if(command.startsWith("SELECT")) {
+                ProcessSelectCommand(command);
+            }
             else {
                 System.out.println("Commande inconnue : " + command);
             }
@@ -147,34 +150,75 @@ public class SGBD {
         dbManager.describeAllTables();
     }
 
+    
+    private void ProcessSelectCommand(String cmd) {
 
-    //Méthode qui vérifie si une commande contient un alias
-    private boolean contientAlias(String command){
-        //Séparer la commande en éléments
-        String[] elements = command.split(" ");
-        //parcourir les éléments et vérifier si l'un d'eux est un nom de table existant
-        for(String element : elements){
-            if(dbManager.getTables().containsKey(element)){
-                return true; // un alias est présent
+        HashMap<String, Relation> aliasMap = extraireAlias(cmd);
+        Relation rel = aliasMap.values().iterator().next();
+
+        ArrayList<Condition> conditions = extraireConditions(cmd);
+        ArrayList<Record> records = rel.getAllRecords();
+
+        ArrayList<String> colonnesSelect = extraireColonnesSelect(cmd);
+        ArrayList<Integer> indexesColonnes = indexColonnes(colonnesSelect, aliasMap);
+        System.out.println("--Résultat de la requête--");
+
+        for (int i = 0; i < records.size(); i++) {
+
+            boolean ok = true;
+            for (Condition cond : conditions) {
+                if (!cond.evaluerConditionIndex(i, aliasMap)) {
+                    ok = false;
+                    break;
+                }
+            }
+
+            if (ok) {
+                if (colonnesSelect.isEmpty()) {
+                    // SELECT *
+                    System.out.println(records.get(i).getValeurs());
+                } else {
+                    // SELECT colonnes
+                    ArrayList<String> ligne = new ArrayList<>();
+                    for (int idx : indexesColonnes) {
+                        ligne.add(records.get(i).getValeurs().get(idx));
+                    }
+                    System.out.println(ligne);
+                }
             }
         }
-        return false;
-    }
+
+        System.out.println("---");
+}
 
     //méthode qui gère les alias dans une commande et retourne une map des alias contenant le nom de l'alias et la relation correspondante
-    private HashMap<String, Relation> extraireAlias(String commande){
-        if(!contientAlias(commande)){
-            return null; //pas d'alias
-        }
+    private HashMap<String, Relation> extraireAlias(String commande) {
+
         HashMap<String, Relation> aliasMap = new HashMap<>();
-        String[] elements = commande.split(" ");//On sépare la commande en éléments
-        for(int i=0; i<elements.length-1; i++){ //on parcourt les éléments
-            String t1 = elements[i];
-            String t2 = elements[i+1];
-            if(dbManager.getTable(t1)!=null){ //si l'élément est un nom de table existant
-                aliasMap.put(t2, dbManager.getTable(t1)); //on ajoute l'alias et la relation correspondante à la map
-            }
+
+        // On isole la partie FROM ... (jusqu'à WHERE s'il existe)
+        String afterFrom = commande.split("FROM")[1].trim();
+
+        if (afterFrom.contains("WHERE")) {
+            afterFrom = afterFrom.split("WHERE")[0].trim();
         }
+
+        // Découpe par espaces
+        String[] tokens = afterFrom.split(" ");
+
+        // Cas 1 : FROM Table
+        if (tokens.length == 1) {
+            Relation rel = dbManager.getTable(tokens[0]);
+            aliasMap.put(tokens[0], rel);
+            return aliasMap;
+        }
+        // Cas 2 : FROM Table Alias
+        String tableName = tokens[0];
+        String alias = tokens[1];
+
+        Relation rel = dbManager.getTable(tableName);
+        aliasMap.put(alias, rel);
+
         return aliasMap;
     }
 
@@ -183,7 +227,7 @@ public class SGBD {
     private boolean contientCondition(String command){
         String[] elements = command.split(" ");
         for(String element : elements){
-            if(element.equalsIgnoreCase("WHERE")){
+            if(element.equals("WHERE")){
                 return true; // une condition est présente
             }
         }
@@ -195,7 +239,7 @@ public class SGBD {
         ArrayList<Condition> conditions = new ArrayList<>();
         final String[] OPERATEURS = {"<=", ">=", "<>", "=", "<", ">"};
         if(!contientCondition(command)){
-            return null; //pas de conditions
+            return conditions; //pas de conditions
         }
         String wherePart = command.split("WHERE")[1].trim(); //on récupère la partie après WHERE
         String[] conds = wherePart.split("AND"); //on sépare les conditions par AND
@@ -206,7 +250,7 @@ public class SGBD {
                     String[] parts = cond.split(op);
                     String gauche = parts[0].trim();
                     String droite = parts[1].trim();
-                    Condition condition = new Condition(gauche, droite, op);
+                    Condition condition = new Condition(gauche, op, droite);
                     // Remplir l'objet condition avec les informations extraites
                     conditions.add(condition);
                     break;
@@ -214,6 +258,42 @@ public class SGBD {
             }
         }
         return conditions;
+    }
+
+    private ArrayList<String> extraireColonnesSelect(String cmd) {
+
+        ArrayList<String> colonnes = new ArrayList<>();
+
+        String selectPart = cmd.split("FROM")[0].replace("SELECT", "").trim(); // partie entre SELECT et FROM
+        // Si SELECT *
+        if (selectPart.equals("*")) {
+            return colonnes; // vide = toutes les colonnes
+        }
+        String[] cols = selectPart.split(","); //On sépare par virgule
+        for (String c : cols) {
+            colonnes.add(c.trim()); //on ajoute la colonne à la liste
+        }
+
+        return colonnes;
+    }
+
+    private ArrayList<Integer> indexColonnes( ArrayList<String> colonnesSelect, HashMap<String, Relation> aliasMap) {
+        ArrayList<Integer> indexes = new ArrayList<>();
+        //On recupère la relation
+        Relation rel = aliasMap.values().iterator().next();
+        //Pour chaque colonne sélectionnée, on trouve son index dans la relation
+        for (String col : colonnesSelect) {
+            String nomCol = col.split("\\.")[1];
+            int idx = 0;
+            for (InfoColonne<String, String> c : rel.getInfoColonne()) {
+                if (c.getNom().equalsIgnoreCase(nomCol)) {
+                    indexes.add(idx); //on ajoute l'index à la liste
+                    break;
+                }
+                idx++;
+            }
+        }
+        return indexes; //liste des indexes des colonnes sélectionnées
     }
 
 }
