@@ -147,11 +147,7 @@ public class Condition {
     }
 
     //Méthode qui compare deux objets en fonction de l'opérateur
-    private boolean comparer(
-        Object gauche,
-        Object droite,
-        String op,
-        InfoColonne<String, String> col) {
+    private boolean comparer(Object gauche, Object droite, String op, InfoColonne<String, String> col) {
 
         String type = col.getType().toUpperCase();
 
@@ -184,7 +180,7 @@ public class Condition {
                 break;
             }
         }
-    return false;
+        return false;
     }
 
 
@@ -233,6 +229,47 @@ public class Condition {
             return valeur.substring(1, valeur.length() - 1);
         }
         return valeur;
-}
+    }
+
+
+    //méthode qui évalue une condition sur un record donné
+    public boolean evaluerConditionSurRecord(Record record, HashMap<String, Relation> aliasMap) {
+        String termeGauche = gauche;
+        String termeDroite = droite;
+
+        // Récupère la colonne gauche
+        InfoColonne<String, String> colGauche = recupererColonne(termeGauche, aliasMap);
+        int indexGauche = recupererIndexColonne(termeGauche, aliasMap);
+
+        Object valeurGauche = convertirValeur(record.getValeurs().get(indexGauche), colGauche);
+
+        Object valeurDroite;
+        if (termeDroite.contains(".")) {
+            // droite est une colonne
+            InfoColonne<String, String> colDroite = recupererColonne(termeDroite, aliasMap);
+            int indexDroite = recupererIndexColonne(termeDroite, aliasMap);
+            valeurDroite = convertirValeur(record.getValeurs().get(indexDroite), colDroite);
+        } else {
+            // droite est une constante → nettoyer les guillemets
+            valeurDroite = convertirValeur(nettoyerConstante(termeDroite), colGauche);
+        }
+
+        return comparer(valeurGauche, valeurDroite, operateur, colGauche);
+    }
+
+    //méthode qui récupère l'index d'une colonne donnée dans une relation associée à un terme (ex: Tab2.AA renvoie l'index de la colonne AA dans la relation Tab2)
+    public int recupererIndexColonne(String terme, HashMap<String, Relation> aliasMap) {
+        String[] parties = terme.split("\\.");
+        String nomColonne = parties[1];
+        Relation rel = recupererRelation(terme, aliasMap);
+        ArrayList<InfoColonne<String, String>> colonnes = (ArrayList<InfoColonne<String, String>>) rel.getInfoColonne();
+
+        for (int i = 0; i < colonnes.size(); i++) {
+            if (colonnes.get(i).getNom().equalsIgnoreCase(nomColonne)) {
+                return i;
+            }
+        }
+        return -1; // pas trouvé
+    }
 
 }
