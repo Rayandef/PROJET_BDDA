@@ -1,9 +1,7 @@
 package bdda.config;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Scanner;
 
 import bdda.config.Relation.Size;
@@ -150,46 +148,37 @@ public class SGBD {
         dbManager.describeAllTables();
     }
 
-    
     private void ProcessSelectCommand(String cmd) {
-
+        //Recuperer la relation et les alias
         HashMap<String, Relation> aliasMap = extraireAlias(cmd);
         Relation rel = aliasMap.values().iterator().next();
-
+        //Création du scanner de lecture
+        IRecordIterator scanner = new RelationScanner(rel);
+        //Récuperer les conditions
         ArrayList<Condition> conditions = extraireConditions(cmd);
-        ArrayList<Record> records = rel.getAllRecords();
-
-        ArrayList<String> colonnesSelect = extraireColonnesSelect(cmd);
-        ArrayList<Integer> indexesColonnes = indexColonnes(colonnesSelect, aliasMap);
-        System.out.println("--Résultat de la requête--");
-
-        for (int i = 0; i < records.size(); i++) {
-
-            boolean ok = true;
-            for (Condition cond : conditions) {
-                if (!cond.evaluerConditionIndex(i, aliasMap)) {
-                    ok = false;
-                    break;
-                }
-            }
-
-            if (ok) {
-                if (colonnesSelect.isEmpty()) {
-                    // SELECT *
-                    System.out.println(records.get(i).getValeurs());
-                } else {
-                    // SELECT colonnes
-                    ArrayList<String> ligne = new ArrayList<>();
-                    for (int idx : indexesColonnes) {
-                        ligne.add(records.get(i).getValeurs().get(idx));
-                    }
-                    System.out.println(ligne);
-                }
-            }
+        
+        //Récuperer les conditons
+        IRecordIterator selectOp = scanner;
+        if (!conditions.isEmpty()) {
+            selectOp = new SelectOperator(scanner, conditions, aliasMap);
         }
 
+        //Récuperer les colonnes sélectionné
+        ArrayList<String> colonnesSelect = extraireColonnesSelect(cmd);
+
+        //Faire la projection sur les colonnes qu'il faut
+        IRecordIterator projectOp = selectOp;
+        if (!colonnesSelect.isEmpty()) {
+            projectOp = new ProjectOperator(selectOp, colonnesSelect, aliasMap);
+        }
+
+        //Afficher les records récuperés
+        RecordPrinter printer = new RecordPrinter(projectOp);
+        printer.printAllRecords();
         System.out.println("---");
-}
+
+    }
+
 
     //méthode qui gère les alias dans une commande et retourne une map des alias contenant le nom de l'alias et la relation correspondante
     private HashMap<String, Relation> extraireAlias(String commande) {
@@ -276,24 +265,4 @@ public class SGBD {
 
         return colonnes;
     }
-
-    private ArrayList<Integer> indexColonnes( ArrayList<String> colonnesSelect, HashMap<String, Relation> aliasMap) {
-        ArrayList<Integer> indexes = new ArrayList<>();
-        //On recupère la relation
-        Relation rel = aliasMap.values().iterator().next();
-        //Pour chaque colonne sélectionnée, on trouve son index dans la relation
-        for (String col : colonnesSelect) {
-            String nomCol = col.split("\\.")[1];
-            int idx = 0;
-            for (InfoColonne<String, String> c : rel.getInfoColonne()) {
-                if (c.getNom().equalsIgnoreCase(nomCol)) {
-                    indexes.add(idx); //on ajoute l'index à la liste
-                    break;
-                }
-                idx++;
-            }
-        }
-        return indexes; //liste des indexes des colonnes sélectionnées
-    }
-
 }

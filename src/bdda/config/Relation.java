@@ -301,7 +301,7 @@ public class Relation {
         return Integer.BYTES + nbCasesParPage;
     }
 
-    private int getDataPageRecordOffset(int slotIdx) {
+    public int getDataPageRecordOffset(int slotIdx) {
         return getDataPageHeaderSize() + slotIdx * getRecordSlotSize();
     }
 
