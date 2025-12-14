@@ -149,35 +149,49 @@ public class SGBD {
     }
 
     private void ProcessSelectCommand(String cmd) {
-        //Recuperer la relation et les alias
+    try {
+        // 1. Récupérer les relations et les alias
         HashMap<String, Relation> aliasMap = extraireAlias(cmd);
+        if (aliasMap.isEmpty()) {
+            System.out.println("Aucune table trouvée pour la commande SELECT");
+            return;
+        }
+
+        // On prend la première relation (pour l'instant, pas de jointure)
         Relation rel = aliasMap.values().iterator().next();
-        //Création du scanner de lecture
+
+        // 2. Créer le scanner pour lire les tuples de la relation
         IRecordIterator scanner = new RelationScanner(rel);
-        //Récuperer les conditions
+
+        // 3. Récupérer les conditions de filtrage
         ArrayList<Condition> conditions = extraireConditions(cmd);
-        
-        //Récuperer les conditons
+
+        // 4. Appliquer le SelectOperator si des conditions existent
         IRecordIterator selectOp = scanner;
         if (!conditions.isEmpty()) {
             selectOp = new SelectOperator(scanner, conditions, aliasMap);
         }
 
-        //Récuperer les colonnes sélectionné
+        // 5. Récupérer les colonnes à projeter
         ArrayList<String> colonnesSelect = extraireColonnesSelect(cmd);
 
-        //Faire la projection sur les colonnes qu'il faut
+        // 6. Appliquer le ProjectOperator si une projection est demandée
         IRecordIterator projectOp = selectOp;
         if (!colonnesSelect.isEmpty()) {
             projectOp = new ProjectOperator(selectOp, colonnesSelect, aliasMap);
         }
 
-        //Afficher les records récuperés
+        // 7. Afficher les tuples récupérés
         RecordPrinter printer = new RecordPrinter(projectOp);
         printer.printAllRecords();
+
         System.out.println("---");
 
+    } catch (Exception e) {
+        System.out.println("Erreur lors de l'exécution du SELECT : " + e.getMessage());
+        e.printStackTrace();
     }
+}
 
 
     //méthode qui gère les alias dans une commande et retourne une map des alias contenant le nom de l'alias et la relation correspondante
