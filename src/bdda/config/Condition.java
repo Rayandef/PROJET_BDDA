@@ -114,14 +114,11 @@ public class Condition {
                 break;
             }
         }
-
         // Récupère les valeurs de la colonne de gauche
         ArrayList<String> valeursGauche = recupererValeursColonne(termeGauche, aliasMap);
-
         // Récupère les valeurs de la colonne de droite si c'est une colonne
         ArrayList<String> valeursDroite = null;
         InfoColonne<String, String> colDroite = colGauche;
-
         if (termeDroite.contains(".")) {
             valeursDroite =
                     recupererValeursColonne(termeDroite, aliasMap);
@@ -138,52 +135,58 @@ public class Condition {
 
         //Parcours les valeurs et évalue la condition
         for (int i = 0; i < valeursGauche.size(); i++) {
-            //Valeur gauche
             Object valeurGauche = convertirValeur(valeursGauche.get(i), colGauche);
-            // valeur droite (colonne ou constante)
-            Object valeurDroite =(valeursDroite != null)? convertirValeur(valeursDroite.get(i), colDroite): convertirValeur(termeDroite.replace("'", ""),colGauche);
-            boolean ok = comparer(valeurGauche, valeurDroite, op);
+            Object valeurDroite =(valeursDroite != null)? convertirValeur(valeursDroite.get(i), colDroite): convertirValeur(nettoyerConstante(termeDroite), colGauche);
+            boolean ok = comparer(valeurGauche,valeurDroite,op,colGauche);
+
             if (ok) {
-                resultats.add(valeursGauche.get(i)); //ajoute la valeur de la colonne de gauche si la condition est satisfaite
+                resultats.add(valeursGauche.get(i));
             }
         }
-
         return resultats;
     }
 
     //Méthode qui compare deux objets en fonction de l'opérateur
-    private boolean comparer(Object gauche, Object droite, String op) {
+    private boolean comparer(
+        Object gauche,
+        Object droite,
+        String op,
+        InfoColonne<String, String> col) {
 
-        // INT ou FLOAT
-        if (gauche instanceof Number && droite instanceof Number) {
-            double a = ((Number) gauche).doubleValue();
-            double b = ((Number) droite).doubleValue();
+        String type = col.getType().toUpperCase();
 
-            switch (op) {
-                case "=":  return a == b;
-                case "<>": return a != b;
-                case "<":  return a < b;
-                case ">":  return a > b;
-                case "<=": return a <= b;
-                case ">=": return a >= b;
+        switch (type) {
+            case "INT", "FLOAT": {
+                double a = (Double) gauche;
+                double b = (Double) droite;
+                switch (op) {
+                    case "=":  return a == b;
+                    case "<>": return a != b;
+                    case "<":  return a < b;
+                    case ">":  return a > b;
+                    case "<=": return a <= b;
+                    case ">=": return a >= b;
+                }
+                break;
+            }
+            case "CHAR", "VARCHAR": {
+                char c1 = ((String) gauche).charAt(0);
+                char c2 = ((String) droite).charAt(0);
+
+                switch (op) {
+                    case "=":  return c1 == c2;
+                    case "<>": return c1 != c2;
+                    case "<":  return c1 < c2;
+                    case ">":  return c1 > c2;
+                    case "<=": return c1 <= c2;
+                    case ">=": return c1 >= c2;
+                }
+                break;
             }
         }
-
-        // CHAR ou VARCHAR
-        String s1 = gauche.toString();
-        String s2 = droite.toString();
-
-        switch (op) {
-            case "=":  return s1.equals(s2);
-            case "<>": return !s1.equals(s2);
-            case "<":  return s1.compareTo(s2) < 0;
-            case ">":  return s1.compareTo(s2) > 0;
-            case "<=": return s1.compareTo(s2) <= 0;
-            case ">=": return s1.compareTo(s2) >= 0;
-        }
-
-        return false;
+    return false;
     }
+
 
     //méthode qui récupère les informations d'une colonne donnée dans une relation associée à un terme (ex: Tab2.AA renvoie les infos de la colonne AA dans la relation Tab2)
     public InfoColonne<String, String> recupererColonne(String terme, HashMap<String, Relation> aliasMap) {
@@ -207,10 +210,8 @@ public class Condition {
     public boolean evaluerConditionIndex(
         int index,
         HashMap<String, Relation> aliasMap) {
-
         String termeGauche = gauche;
         String termeDroite = droite;
-
         // Récupère et convertit la valeur de gauche
         Object valeurGauche = convertirValeur(recupererValeursColonne(termeGauche, aliasMap).get(index), recupererColonne(termeGauche, aliasMap));
 
@@ -219,10 +220,19 @@ public class Condition {
         if (termeDroite.contains(".")) {
             valeurDroite = convertirValeur(recupererValeursColonne(termeDroite, aliasMap).get(index),recupererColonne(termeDroite, aliasMap)); // Récupère et convertit la valeur de droite
         } else {
-            valeurDroite = convertirValeur(termeDroite.replace("'", ""), recupererColonne(termeGauche, aliasMap)); // Sinon c'est une constante
+            valeurDroite = convertirValeur(nettoyerConstante(termeDroite),recupererColonne(termeGauche, aliasMap));
         }
-
-        return comparer(valeurGauche, valeurDroite, operateur);
+        return comparer(valeurGauche,valeurDroite,operateur,recupererColonne(termeGauche, aliasMap));
     }
+
+    //méthode qui nettoie une constante en enlevant les guillemets s'ils sont présents
+    private String nettoyerConstante(String valeur) {
+        valeur = valeur.trim();
+        if ((valeur.startsWith("'") && valeur.endsWith("'")) || (valeur.startsWith("\"") && valeur.endsWith("\""))
+        ) {
+            return valeur.substring(1, valeur.length() - 1);
+        }
+        return valeur;
+}
 
 }
