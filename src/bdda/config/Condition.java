@@ -153,35 +153,39 @@ public class Condition {
 
         switch (type) {
             case "INT", "FLOAT": {
-                double a = (Double) gauche;
-                double b = (Double) droite;
-                switch (op) {
-                    case "=":  return a == b;
-                    case "<>": return a != b;
-                    case "<":  return a < b;
-                    case ">":  return a > b;
-                    case "<=": return a <= b;
-                    case ">=": return a >= b;
-                }
-                break;
-            }
-            case "CHAR", "VARCHAR": {
-                char c1 = ((String) gauche).charAt(0);
-                char c2 = ((String) droite).charAt(0);
+                double a = Double.parseDouble(gauche.toString());
+                double b = Double.parseDouble(droite.toString());
 
-                switch (op) {
-                    case "=":  return c1 == c2;
-                    case "<>": return c1 != c2;
-                    case "<":  return c1 < c2;
-                    case ">":  return c1 > c2;
-                    case "<=": return c1 <= c2;
-                    case ">=": return c1 >= c2;
-                }
-                break;
+                return switch (op) {
+                    case "="  -> a == b;
+                    case "<>" -> a != b;
+                    case "<"  -> a < b;
+                    case ">"  -> a > b;
+                    case "<=" -> a <= b;
+                    case ">=" -> a >= b;
+                    default   -> false;
+                };
+            }
+
+            case "CHAR", "VARCHAR": {
+                String s1 = gauche.toString();
+                String s2 = droite.toString();
+                int cmp = s1.compareTo(s2);
+
+                return switch (op) {
+                    case "="  -> cmp == 0;
+                    case "<>" -> cmp != 0;
+                    case "<"  -> cmp < 0;
+                    case ">"  -> cmp > 0;
+                    case "<=" -> cmp <= 0;
+                    case ">=" -> cmp >= 0;
+                    default   -> false;
+                };
             }
         }
         return false;
-    }
+}
+
 
 
     //méthode qui récupère les informations d'une colonne donnée dans une relation associée à un terme (ex: Tab2.AA renvoie les infos de la colonne AA dans la relation Tab2)
@@ -234,28 +238,48 @@ public class Condition {
 
     //méthode qui évalue une condition sur un record donné
     public boolean evaluerConditionSurRecord(Record record, HashMap<String, Relation> aliasMap) {
-        String termeGauche = gauche;
-        String termeDroite = droite;
 
-        // Récupère la colonne gauche
-        InfoColonne<String, String> colGauche = recupererColonne(termeGauche, aliasMap);
-        int indexGauche = recupererIndexColonne(termeGauche, aliasMap);
-
-        Object valeurGauche = convertirValeur(record.getValeurs().get(indexGauche), colGauche);
-
+        Object valeurGauche;
         Object valeurDroite;
-        if (termeDroite.contains(".")) {
-            // droite est une colonne
-            InfoColonne<String, String> colDroite = recupererColonne(termeDroite, aliasMap);
-            int indexDroite = recupererIndexColonne(termeDroite, aliasMap);
-            valeurDroite = convertirValeur(record.getValeurs().get(indexDroite), colDroite);
+        InfoColonne<String, String> colonneReference = null;
+
+        //pour le terme de gauche
+        if (gauche.contains(".")) {
+            // gauche = colonne
+            InfoColonne<String, String> colGauche = recupererColonne(gauche, aliasMap);
+            int indexGauche = recupererIndexColonne(gauche, aliasMap);
+
+            valeurGauche = convertirValeur(record.getValeurs().get(indexGauche), colGauche);
+            colonneReference = colGauche;
         } else {
-            // droite est une constante → nettoyer les guillemets
-            valeurDroite = convertirValeur(nettoyerConstante(termeDroite), colGauche);
+            // gauche = constante
+            valeurGauche = nettoyerConstante(gauche);
         }
 
-        return comparer(valeurGauche, valeurDroite, operateur, colGauche);
+        //Pour le terme de droite
+        if (droite.contains(".")) {
+            // droite = colonne
+            InfoColonne<String, String> colDroite = recupererColonne(droite, aliasMap);
+            int indexDroite = recupererIndexColonne(droite, aliasMap);
+
+            valeurDroite = convertirValeur(record.getValeurs().get(indexDroite), colDroite);
+
+            if (colonneReference == null) {
+                colonneReference = colDroite;
+            }
+        } else {
+            // droite = constante
+            valeurDroite = nettoyerConstante(droite);
+        }
+
+
+        //On convertit les valeurs
+        if (!(valeurGauche instanceof Number) && !(valeurGauche instanceof String)) {valeurGauche = convertirValeur(valeurGauche.toString(), colonneReference);}
+        if (!(valeurDroite instanceof Number) && !(valeurDroite instanceof String)) {valeurDroite = convertirValeur(valeurDroite.toString(), colonneReference);}
+
+        return comparer(valeurGauche, valeurDroite, operateur, colonneReference);
     }
+
 
     //méthode qui récupère l'index d'une colonne donnée dans une relation associée à un terme (ex: Tab2.AA renvoie l'index de la colonne AA dans la relation Tab2)
     public int recupererIndexColonne(String terme, HashMap<String, Relation> aliasMap) {
