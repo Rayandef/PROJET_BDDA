@@ -76,6 +76,9 @@ public class RelationTests {
                 } else {
                     System.out.println("Erreur : le record n'a pas pu être inséré.");
                 }
+                if (i==6){
+                    relation.deleteRecord(rid);
+                }
             }
 
             // === Récupération de tous les records ===
