@@ -114,14 +114,11 @@ public class Condition {
                 break;
             }
         }
-
         // Récupère les valeurs de la colonne de gauche
         ArrayList<String> valeursGauche = recupererValeursColonne(termeGauche, aliasMap);
-
         // Récupère les valeurs de la colonne de droite si c'est une colonne
         ArrayList<String> valeursDroite = null;
         InfoColonne<String, String> colDroite = colGauche;
-
         if (termeDroite.contains(".")) {
             valeursDroite =
                     recupererValeursColonne(termeDroite, aliasMap);
@@ -138,52 +135,58 @@ public class Condition {
 
         //Parcours les valeurs et évalue la condition
         for (int i = 0; i < valeursGauche.size(); i++) {
-            //Valeur gauche
             Object valeurGauche = convertirValeur(valeursGauche.get(i), colGauche);
-            // valeur droite (colonne ou constante)
-            Object valeurDroite =(valeursDroite != null)? convertirValeur(valeursDroite.get(i), colDroite): convertirValeur(termeDroite.replace("'", ""),colGauche);
-            boolean ok = comparer(valeurGauche, valeurDroite, op);
+            Object valeurDroite =(valeursDroite != null)? convertirValeur(valeursDroite.get(i), colDroite): convertirValeur(nettoyerConstante(termeDroite), colGauche);
+            boolean ok = comparer(valeurGauche,valeurDroite,op,colGauche);
+
             if (ok) {
-                resultats.add(valeursGauche.get(i)); //ajoute la valeur de la colonne de gauche si la condition est satisfaite
+                resultats.add(valeursGauche.get(i));
             }
         }
-
         return resultats;
     }
 
     //Méthode qui compare deux objets en fonction de l'opérateur
-    private boolean comparer(Object gauche, Object droite, String op) {
+    private boolean comparer(Object gauche, Object droite, String op, InfoColonne<String, String> col) {
 
-        // INT ou FLOAT
-        if (gauche instanceof Number && droite instanceof Number) {
-            double a = ((Number) gauche).doubleValue();
-            double b = ((Number) droite).doubleValue();
+        String type = col.getType().toUpperCase();
 
-            switch (op) {
-                case "=":  return a == b;
-                case "<>": return a != b;
-                case "<":  return a < b;
-                case ">":  return a > b;
-                case "<=": return a <= b;
-                case ">=": return a >= b;
+        switch (type) {
+            case "INT", "FLOAT": {
+                double a = Double.parseDouble(gauche.toString());
+                double b = Double.parseDouble(droite.toString());
+
+                return switch (op) {
+                    case "="  -> a == b;
+                    case "<>" -> a != b;
+                    case "<"  -> a < b;
+                    case ">"  -> a > b;
+                    case "<=" -> a <= b;
+                    case ">=" -> a >= b;
+                    default   -> false;
+                };
+            }
+
+            case "CHAR", "VARCHAR": {
+                String s1 = gauche.toString();
+                String s2 = droite.toString();
+                int cmp = s1.compareTo(s2);
+
+                return switch (op) {
+                    case "="  -> cmp == 0;
+                    case "<>" -> cmp != 0;
+                    case "<"  -> cmp < 0;
+                    case ">"  -> cmp > 0;
+                    case "<=" -> cmp <= 0;
+                    case ">=" -> cmp >= 0;
+                    default   -> false;
+                };
             }
         }
-
-        // CHAR ou VARCHAR
-        String s1 = gauche.toString();
-        String s2 = droite.toString();
-
-        switch (op) {
-            case "=":  return s1.equals(s2);
-            case "<>": return !s1.equals(s2);
-            case "<":  return s1.compareTo(s2) < 0;
-            case ">":  return s1.compareTo(s2) > 0;
-            case "<=": return s1.compareTo(s2) <= 0;
-            case ">=": return s1.compareTo(s2) >= 0;
-        }
-
         return false;
-    }
+}
+
+
 
     //méthode qui récupère les informations d'une colonne donnée dans une relation associée à un terme (ex: Tab2.AA renvoie les infos de la colonne AA dans la relation Tab2)
     public InfoColonne<String, String> recupererColonne(String terme, HashMap<String, Relation> aliasMap) {
@@ -207,10 +210,8 @@ public class Condition {
     public boolean evaluerConditionIndex(
         int index,
         HashMap<String, Relation> aliasMap) {
-
         String termeGauche = gauche;
         String termeDroite = droite;
-
         // Récupère et convertit la valeur de gauche
         Object valeurGauche = convertirValeur(recupererValeursColonne(termeGauche, aliasMap).get(index), recupererColonne(termeGauche, aliasMap));
 
@@ -219,10 +220,80 @@ public class Condition {
         if (termeDroite.contains(".")) {
             valeurDroite = convertirValeur(recupererValeursColonne(termeDroite, aliasMap).get(index),recupererColonne(termeDroite, aliasMap)); // Récupère et convertit la valeur de droite
         } else {
-            valeurDroite = convertirValeur(termeDroite.replace("'", ""), recupererColonne(termeGauche, aliasMap)); // Sinon c'est une constante
+            valeurDroite = convertirValeur(nettoyerConstante(termeDroite),recupererColonne(termeGauche, aliasMap));
+        }
+        return comparer(valeurGauche,valeurDroite,operateur,recupererColonne(termeGauche, aliasMap));
+    }
+
+    //méthode qui nettoie une constante en enlevant les guillemets s'ils sont présents
+    private String nettoyerConstante(String valeur) {
+        valeur = valeur.trim();
+        if ((valeur.startsWith("'") && valeur.endsWith("'")) || (valeur.startsWith("\"") && valeur.endsWith("\""))
+        ) {
+            return valeur.substring(1, valeur.length() - 1);
+        }
+        return valeur;
+    }
+
+
+    //méthode qui évalue une condition sur un record donné
+    public boolean evaluerConditionSurRecord(Record record, HashMap<String, Relation> aliasMap) {
+
+        Object valeurGauche;
+        Object valeurDroite;
+        InfoColonne<String, String> colonneReference = null;
+
+        //pour le terme de gauche
+        if (gauche.contains(".")) {
+            // gauche = colonne
+            InfoColonne<String, String> colGauche = recupererColonne(gauche, aliasMap);
+            int indexGauche = recupererIndexColonne(gauche, aliasMap);
+
+            valeurGauche = convertirValeur(record.getValeurs().get(indexGauche), colGauche);
+            colonneReference = colGauche;
+        } else {
+            // gauche = constante
+            valeurGauche = nettoyerConstante(gauche);
         }
 
-        return comparer(valeurGauche, valeurDroite, operateur);
+        //Pour le terme de droite
+        if (droite.contains(".")) {
+            // droite = colonne
+            InfoColonne<String, String> colDroite = recupererColonne(droite, aliasMap);
+            int indexDroite = recupererIndexColonne(droite, aliasMap);
+
+            valeurDroite = convertirValeur(record.getValeurs().get(indexDroite), colDroite);
+
+            if (colonneReference == null) {
+                colonneReference = colDroite;
+            }
+        } else {
+            // droite = constante
+            valeurDroite = nettoyerConstante(droite);
+        }
+
+
+        //On convertit les valeurs
+        if (!(valeurGauche instanceof Number) && !(valeurGauche instanceof String)) {valeurGauche = convertirValeur(valeurGauche.toString(), colonneReference);}
+        if (!(valeurDroite instanceof Number) && !(valeurDroite instanceof String)) {valeurDroite = convertirValeur(valeurDroite.toString(), colonneReference);}
+
+        return comparer(valeurGauche, valeurDroite, operateur, colonneReference);
+    }
+
+
+    //méthode qui récupère l'index d'une colonne donnée dans une relation associée à un terme (ex: Tab2.AA renvoie l'index de la colonne AA dans la relation Tab2)
+    public int recupererIndexColonne(String terme, HashMap<String, Relation> aliasMap) {
+        String[] parties = terme.split("\\.");
+        String nomColonne = parties[1];
+        Relation rel = recupererRelation(terme, aliasMap);
+        ArrayList<InfoColonne<String, String>> colonnes = (ArrayList<InfoColonne<String, String>>) rel.getInfoColonne();
+
+        for (int i = 0; i < colonnes.size(); i++) {
+            if (colonnes.get(i).getNom().equalsIgnoreCase(nomColonne)) {
+                return i;
+            }
+        }
+        return -1; // pas trouvé
     }
 
 }
