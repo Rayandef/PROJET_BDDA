@@ -1,7 +1,11 @@
 package bdda.config;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Scanner;
 
 import bdda.config.Relation.Size;
@@ -30,32 +34,42 @@ public class SGBD {
         Scanner sc = new Scanner(System.in);
 
         while (true) {
-            String command = sc.nextLine().trim();
+            try {
+                String command = sc.nextLine().trim();
 
-            if (command.equalsIgnoreCase("EXIT")) {
-                ProcessExitCommand();
-                break;
-            }
-            else if (command.startsWith("CREATE TABLE")) {
-                ProcessCreateTableCommand(command);
-            }
-            else if (command.startsWith("DROP TABLES")) {
-                ProcessDropAllTablesCommand();
-            }
-            else if (command.startsWith("DROP TABLE")) {
-                ProcessDropTableCommand(command);
-            }
-            else if (command.startsWith("DESCRIBE TABLES")) {
-                ProcessDescribeAllTablesCommand();
-            }
-            else if (command.startsWith("DESCRIBE TABLE")) {
-                ProcessDescribeTableCommand(command);
-            }
-            else if(command.startsWith("SELECT")) {
-                ProcessSelectCommand(command);
-            }
-            else {
-                System.out.println("Commande inconnue : " + command);
+                if (command.equalsIgnoreCase("EXIT")) {
+                    processExitCommand();
+                    break;
+                }
+                else if (command.startsWith("CREATE TABLE")) {
+                    processCreateTableCommand(command);
+                }
+                else if (command.startsWith("DROP TABLES")) {
+                    processDropAllTablesCommand();
+                }
+                else if (command.startsWith("DROP TABLE")) {
+                    processDropTableCommand(command);
+                }
+                else if (command.startsWith("DESCRIBE TABLES")) {
+                    processDescribeAllTablesCommand();
+                }
+                else if (command.startsWith("DESCRIBE TABLE")) {
+                    processDescribeTableCommand(command);
+                }
+                else if(command.startsWith("SELECT")) {
+                    processSelectCommand(command);
+                }
+                else if(command.startsWith("INSERT INTO")){
+                    processInsertIntoCommand(command);
+                }
+                else if(command.startsWith("APPEND INTO")){
+                    processAppendIntoCommand(command);
+                }
+                else {
+                    System.out.println("Commande inconnue : " + command);
+                }
+            } catch (Exception e){
+                System.out.println(e);
             }
         }
 
@@ -63,7 +77,7 @@ public class SGBD {
     }
 
 
-    private void ProcessExitCommand() {
+    private void processExitCommand() {
         dbManager.saveState();
         bufferManager.FlushBuffers();
         diskManager.finish();
@@ -71,7 +85,7 @@ public class SGBD {
     }
 
 
-    private void ProcessCreateTableCommand(String cmd) {
+    private void processCreateTableCommand(String cmd) {
         try {
             String after = cmd.replace("CREATE TABLE", "").trim();
             String tableName = after.substring(0, after.indexOf("(")).trim();
@@ -113,7 +127,7 @@ public class SGBD {
     }
 
 
-    private void ProcessDropTableCommand(String cmd) {
+    private void processDropTableCommand(String cmd) {
         String nom = cmd.replace("DROP TABLE", "").trim();
 
         Relation rel = dbManager.getTable(nom);
@@ -129,7 +143,7 @@ public class SGBD {
     }
 
 
-    private void ProcessDropAllTablesCommand() {
+    private void processDropAllTablesCommand() {
 
         for (String nom : new ArrayList<>(dbManager.getTables().keySet())) {
             Relation rel = dbManager.getTable(nom);
@@ -146,17 +160,17 @@ public class SGBD {
     }
 
 
-    private void ProcessDescribeTableCommand(String cmd) {
+    private void processDescribeTableCommand(String cmd) {
         String nom = cmd.replace("DESCRIBE TABLE", "").trim();
         dbManager.describeTable(nom);
     }
 
 
-    private void ProcessDescribeAllTablesCommand() {
+    private void processDescribeAllTablesCommand() {
         dbManager.describeAllTables();
     }
 
-    private void ProcessSelectCommand(String cmd) {
+    private void processSelectCommand(String cmd) {
     try {
         // 1. Récupérer les relations et les alias
         HashMap<String, Relation> aliasMap = extraireAlias(cmd);
@@ -286,5 +300,53 @@ public class SGBD {
         }
 
         return colonnes;
+    }
+
+    private void processInsertIntoCommand(String cmd){
+        String[] command = cmd.split("\\s");
+        Relation table = dbManager.getTable(command[2]);
+        if (table == null){
+            System.out.println("Aucune table trouvée pour la commande INSERT INTO");
+            return ;
+        }
+        String[] valeurs = command[4].split("[,()]");
+        List<String> valeurList = new ArrayList<>();
+        for (String s : valeurs){
+            if (!s.isEmpty()){
+                valeurList.add(s);
+            }
+        }
+        Record record = new Record(valeurList);
+        if (table.estInserable(record)){
+            table.insertRecord(record);
+        }
+    }
+
+    private void processAppendIntoCommand(String cmd){
+        String[] command = cmd.split("\\s");
+        Relation table = dbManager.getTable(command[2]);
+        if (table == null){
+            System.out.println("Aucune table trouvée pour la commande INSERT INTO");
+            return ;
+        }
+
+        String pathFileCSV = command[4].substring(command[4].indexOf("(") + 1, command[4].indexOf(")"));
+
+        try (BufferedReader br = new BufferedReader(new FileReader(pathFileCSV))) {
+            String line ;
+            while ((line = br.readLine()) != null){
+                String[] valeurs = line.split(",");
+                List<String> valeurList = new ArrayList<>();
+                for (String s : valeurs){
+                    valeurList.add(s);
+                }
+                Record record = new Record(valeurList);
+                if (table.estInserable(record)){
+                    table.insertRecord(record);
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Erreur lors de la lecture du fichier .csv : " + e);
+        }
     }
 }

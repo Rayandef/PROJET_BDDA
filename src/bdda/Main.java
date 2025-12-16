@@ -1,7 +1,11 @@
 package bdda;
 
+import bdda.config.DBConfig;
+import bdda.config.SGBD;
+
 public class Main{
     public static void main(String[] args){
-        System.out.println("PAS ENCORE");
+        SGBD sgbd = new SGBD(new DBConfig());
+        sgbd.Run();
     }
 }

@@ -662,7 +662,51 @@ public class Relation {
         return pages;
     }
 
-
-
-
+    public boolean estInserable(Record record){
+        List<String> typeColonne = new ArrayList<>();
+        for (InfoColonne<String,String> ic : getInfoColonne()){
+            typeColonne.add(ic.getType());
+        }
+        List<String> valeurs = record.getValeurs();
+        if (typeColonne.size() != valeurs.size()){
+            System.out.println("Le nombre de valeurs à insérer dans la table ne correspond pas au nombre de colonne");
+            return false ;
+        }
+        boolean estInserable = true ;
+        for (int i = 0 ; i < typeColonne.size() ; i++){
+            switch(typeColonne.get(i)){
+                case "INT" :
+                    try {
+                        Integer.parseInt(valeurs.get(i));
+                    } catch (NumberFormatException e){
+                        System.out.println("Le type des valeurs ne correspond pas au type des colonnes de la table !");
+                        estInserable = false ;
+                    }
+                    break ;
+                case "FLOAT" :
+                    try {
+                        Double.parseDouble(valeurs.get(i));
+                    } catch (NumberFormatException e){
+                        System.out.println("Le type des valeurs ne correspond pas au type des colonnes de la table !");
+                        estInserable = false ;
+                    }
+                    break ;
+                case "CHAR" :
+                    if (!valeurs.get(i).startsWith("\"") && !valeurs.get(i).endsWith("\"")){
+                        System.out.println("Le type des valeurs ne correspond pas au type des colonnes de la table !");
+                        estInserable = false ;
+                    }
+                    break ;
+                case "VARCHAR" :
+                    if (!valeurs.get(i).startsWith("\"") && !valeurs.get(i).endsWith("\"")){
+                        System.out.println("Le type des valeurs ne correspond pas au type des colonnes de la table !");
+                        estInserable = false ;
+                    }
+                    break ;
+                default :
+                    System.out.println("C'est pas possible");
+            }
+        }
+        return estInserable ;
+    }
 }
