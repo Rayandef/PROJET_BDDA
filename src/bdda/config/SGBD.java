@@ -75,7 +75,6 @@ public class SGBD {
         try {
             String after = cmd.replace("CREATE TABLE", "").trim();
             String tableName = after.substring(0, after.indexOf("(")).trim();
-
             String inside = after.substring(after.indexOf("(") + 1, after.lastIndexOf(")"));
             String[] fields = inside.split(",");
 
@@ -85,8 +84,17 @@ public class SGBD {
                 String[] parts = f.split(":");
                 InfoColonne<String, String> col = new InfoColonne<>();
                 col.setNom(parts[0]);
-                col.setType(parts[1].split("\\(")[0]);
-                Size.valueOf(col.getType()).setTaille(Integer.parseInt(parts[1].split("\\(")[1].split("\\)")[0]));
+                System.out.println(parts[1]);
+                
+                switch(parts[1]){
+                    case "FLOAT", "INT":
+                    col.setType(parts[1]);
+                    break;
+
+                    default:
+                    col.setType(parts[1].split("\\(")[0]);
+                    Size.valueOf(col.getType()).setTaille(Integer.parseInt(parts[1].split("\\(")[1].split("\\)")[0]));
+                }
                 colonnes.add(col);
             }
 
