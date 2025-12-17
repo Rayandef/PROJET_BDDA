@@ -65,6 +65,9 @@ public class SGBD {
                 else if(command.startsWith("APPEND INTO")){
                     processAppendIntoCommand(command);
                 }
+                else if(command.startsWith("DELETE")){
+                    processDeleteCommand(command);
+                }
                 else {
                     System.out.println("Commande inconnue : " + command);
                 }
@@ -97,9 +100,7 @@ public class SGBD {
             for (String f : fields) {
                 String[] parts = f.split(":");
                 InfoColonne<String, String> col = new InfoColonne<>();
-                col.setNom(parts[0]);
-                System.out.println(parts[1]);
-                
+                col.setNom(parts[0]);                
                 switch(parts[1]){
                     case "FLOAT", "INT":
                     col.setType(parts[1]);
@@ -171,49 +172,49 @@ public class SGBD {
     }
 
     private void processSelectCommand(String cmd) {
-    try {
-        // 1. Récupérer les relations et les alias
-        HashMap<String, Relation> aliasMap = extraireAlias(cmd);
-        if (aliasMap.isEmpty()) {
-            System.out.println("Aucune table trouvée pour la commande SELECT");
-            return;
+        try {
+            // 1. Récupérer les relations et les alias
+            HashMap<String, Relation> aliasMap = extraireAlias(cmd);
+            if (aliasMap.isEmpty()) {
+                System.out.println("Aucune table trouvée pour la commande SELECT");
+                return;
+            }
+
+            // On prend la première relation (pour l'instant, pas de jointure)
+            Relation rel = aliasMap.values().iterator().next();
+
+            // 2. Créer le scanner pour lire les tuples de la relation
+            IRecordIterator scanner = new RelationScanner(rel);
+
+            // 3. Récupérer les conditions de filtrage
+            ArrayList<Condition> conditions = extraireConditions(cmd);
+
+            // 4. Appliquer le SelectOperator si des conditions existent
+            IRecordIterator selectOp = scanner;
+            if (!conditions.isEmpty()) {
+                selectOp = new SelectOperator(scanner, conditions, aliasMap);
+            }
+
+            // 5. Récupérer les colonnes à projeter
+            ArrayList<String> colonnesSelect = extraireColonnesSelect(cmd);
+
+            // 6. Appliquer le ProjectOperator si une projection est demandée
+            IRecordIterator projectOp = selectOp;
+            if (!colonnesSelect.isEmpty()) {
+                projectOp = new ProjectOperator(selectOp, colonnesSelect, aliasMap);
+            }
+
+            // 7. Afficher les tuples récupérés
+            RecordPrinter printer = new RecordPrinter(projectOp);
+            printer.printAllRecords();
+
+            System.out.println("---");
+
+        } catch (Exception e) {
+            System.out.println("Erreur lors de l'exécution du SELECT : " + e.getMessage());
+            e.printStackTrace();
         }
-
-        // On prend la première relation (pour l'instant, pas de jointure)
-        Relation rel = aliasMap.values().iterator().next();
-
-        // 2. Créer le scanner pour lire les tuples de la relation
-        IRecordIterator scanner = new RelationScanner(rel);
-
-        // 3. Récupérer les conditions de filtrage
-        ArrayList<Condition> conditions = extraireConditions(cmd);
-
-        // 4. Appliquer le SelectOperator si des conditions existent
-        IRecordIterator selectOp = scanner;
-        if (!conditions.isEmpty()) {
-            selectOp = new SelectOperator(scanner, conditions, aliasMap);
-        }
-
-        // 5. Récupérer les colonnes à projeter
-        ArrayList<String> colonnesSelect = extraireColonnesSelect(cmd);
-
-        // 6. Appliquer le ProjectOperator si une projection est demandée
-        IRecordIterator projectOp = selectOp;
-        if (!colonnesSelect.isEmpty()) {
-            projectOp = new ProjectOperator(selectOp, colonnesSelect, aliasMap);
-        }
-
-        // 7. Afficher les tuples récupérés
-        RecordPrinter printer = new RecordPrinter(projectOp);
-        printer.printAllRecords();
-
-        System.out.println("---");
-
-    } catch (Exception e) {
-        System.out.println("Erreur lors de l'exécution du SELECT : " + e.getMessage());
-        e.printStackTrace();
     }
-}
 
 
     //méthode qui gère les alias dans une commande et retourne une map des alias contenant le nom de l'alias et la relation correspondante
@@ -349,4 +350,71 @@ public class SGBD {
             System.out.println("Erreur lors de la lecture du fichier .csv : " + e);
         }
     }
+
+    private HashMap<String, Relation> extraireAliasDelete(String cmd) {
+
+        HashMap<String, Relation> aliasMap = new HashMap<>();
+
+        // DELETE Pomme c WHERE ...
+        String apresDelete = cmd.replaceFirst("DELETE", "").trim();
+
+        if (apresDelete.contains("WHERE")) {
+            apresDelete = apresDelete.split("WHERE")[0].trim();
+        }
+
+        String[] tokens = apresDelete.split("\\s+");
+
+        // DELETE Pomme
+        if (tokens.length == 1) {
+            Relation rel = dbManager.getTable(tokens[0]);
+            aliasMap.put(tokens[0], rel);
+            return aliasMap;
+        }
+
+        // DELETE Pomme c
+        String tableName = tokens[0];
+        String alias = tokens[1];
+
+        Relation rel = dbManager.getTable(tableName);
+        aliasMap.put(alias, rel);
+
+        return aliasMap;
+    }
+
+
+
+    private void processDeleteCommand(String cmd) {
+        // 1. Alias
+        HashMap<String, Relation> aliasMap = extraireAliasDelete(cmd);
+        Relation rel = aliasMap.values().iterator().next();
+        // 2. Conditions
+        ArrayList<Condition> conditions = extraireConditions(cmd);
+        // 3. Scanner existant
+        RelationScanner scanner = new RelationScanner(rel);
+
+        int nbSupprimes = 0;
+        Record record;
+
+        while ((record = scanner.getNextRecord()) != null) {
+
+            boolean ok = true;
+            for (Condition c : conditions) {
+                if (!c.evaluerConditionSurRecord(record, aliasMap)) {
+                    ok = false;
+                    break;
+                }
+            }
+
+            if (ok) {
+                RecordId rid = scanner.getCurrentRecordId();
+                rel.deleteRecord(rid);
+                nbSupprimes++;
+            }
+        }
+
+        scanner.close();
+        System.out.println(nbSupprimes + " ligne(s) supprimée(s)");
+    }
+
+
 }
