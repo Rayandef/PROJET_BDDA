@@ -10,7 +10,9 @@ public class RelationScanner implements IRecordIterator{
     private int tupleIndex; //index du tuple courant dans la page courante
     private ByteBuffer pageBufferActuel; //buffer de la page courante
     private PageID pageIDActuel; //PageID de la page courante
-    
+    private int lastSlotIndex = -1; //derniere case exploree
+    private PageID lastPageId = null; //dernier pageID explore
+
     public RelationScanner(Relation relation){
         this.relation = relation;
         this.pageIndex = 0;
@@ -40,25 +42,30 @@ public class RelationScanner implements IRecordIterator{
 
 @Override
 public Record getNextRecord() {
-    if(pageBufferActuel == null){
+    if (pageBufferActuel == null) {
         return null; // plus de pages
     }
-
-    while(tupleIndex < relation.getNbCasesParPage()){
+    while (tupleIndex < relation.getNbCasesParPage()) {
         int stateOffset = Integer.BYTES + tupleIndex; // état du tuple
         byte state = pageBufferActuel.get(stateOffset);
-        if(state != 0){
+        if (state != 0) {
             Record record = new Record();
-            relation.readFromBuffer(record, pageBufferActuel, relation.getDataPageRecordOffset(tupleIndex));
+            // Lecture du record
+            relation.readFromBuffer(record, pageBufferActuel,relation.getDataPageRecordOffset(tupleIndex));
+            //Mémorisation du RecordId courant
+            lastSlotIndex = tupleIndex;
+            lastPageId = pageIDActuel;
             tupleIndex++;
             return record;
         }
+
         tupleIndex++;
     }
-
+    // Fin de page, on libère et on passe à la suivante
     relation.getBufferManager().FreePage(pageIDActuel, false);
     pageIndex++;
     loadNextPage();
+
     return getNextRecord();
 }
 
@@ -83,5 +90,13 @@ public Record getNextRecord() {
         pageBufferActuel = null;
         pageIDActuel = null;
     }
+
+    public RecordId getCurrentRecordId() {
+        if (lastPageId == null || lastSlotIndex < 0) {
+            return null;
+        }
+        return new RecordId(lastPageId, lastSlotIndex);
+    }
+
 
 }
