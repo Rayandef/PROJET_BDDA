@@ -33,17 +33,27 @@ public class BufferManager {
 		this.diskManager = diskManager;
 	}
 
-	/** Retourne la configuration (référence). */
+	/**
+	 * Retourne la configuration de la base.
+	 *
+	 * @return instance de DBConfig
+	 */
 	public DBConfig getDbConfig() {
 		return this.dbConfig;
 	}
 
-	/** Retourne la référence vers le DiskManager (NE PAS CLONER). */
+	/**
+	 * Retourne le DiskManager associé.
+	 *
+	 * @return instance de DiskManager
+	 */
 	public DiskManager getDiskManager() {
 		return this.diskManager;
 	}
 
-	/** Délègue l'initialisation au DiskManager. */
+	/**
+	 *  Délègue l'initialisation au DiskManager. 
+	 */
 	public void init() {
 		this.diskManager.init();
 		// initialise le pool de buffers gérés par le BufferManager
@@ -61,7 +71,9 @@ public class BufferManager {
 		}
 	}
 
-	/** Délègue la sauvegarde / fin au DiskManager. */
+	/** 
+	 * Délègue la sauvegarde / fin au DiskManager. 
+	 */
 	public void finish() {
 		// flush all dirty buffers before finishing
 		for (BufferFrame f : this.frames) {
@@ -72,27 +84,47 @@ public class BufferManager {
 		this.diskManager.finish();
 	}
 
-	/** Alloue une page en déléguant au DiskManager. */
+	/** 
+	 * Alloue une page en déléguant au DiskManager.
+	 * 
+	 * @return identifiant de la page allouée
+	 */
 	public PageID allocPage() {
 		return this.diskManager.allocPage();
 	}
 
-	/** Désalloue une page en la passant au DiskManager. */
+	/** 
+	 * Désalloue une page en la passant au DiskManager. 
+	 * 
+	 * @param pageID identifiant de la page à désallouer
+	 */
 	public void deAllocPage(PageID pageID) {
 		this.diskManager.deAllocPage(pageID);
 	}
 
-	/** Lit une page en déléguant au DiskManager. */
+	/** 
+	 * Lit une page en déléguant au DiskManager. 
+	 * 
+	 * * @param pageID identifiant de la page
+	 * @param buff buffer destination
+	 */
 	public void readPage(PageID pageID, ByteBuffer buff) {
 		this.diskManager.readPage(pageID, buff);
 	}
 
-	/** Écrit une page en déléguant au DiskManager. */
+	/** 
+	 * Écrit une page en déléguant au DiskManager. 
+	 * 
+	 * @param pageID identifiant de la page
+	 * @param buff buffer source
+	 */
 	public void writePage(PageID pageID, ByteBuffer buff) {
 		this.diskManager.writePage(pageID, buff);
 	}
 
-	// ----------------- Pool interne et politique de remplacement -----------------
+	// Pool interne et politique de remplacement
+
+	/** Nombre de buffers par défaut */
 	private static final int DEFAULT_NUM_BUFFERS = 5;
 
 	/** Liste des frames (buffers) gérés par le BufferManager */
@@ -192,7 +224,11 @@ public class BufferManager {
 		return target.buffer;
 	}
 
-	/** Ecrit le contenu du frame sur le disque via DiskManager */
+	/** 
+	 * Ecrit le contenu du frame sur le disque via DiskManager 
+	 * 
+	 * @param f buffer à écrire
+	 */
 	private void flushFrame(BufferFrame f) {
 		if (f == null || f.pageID == null) return;
 		try {
@@ -206,7 +242,7 @@ public class BufferManager {
 		}
 	}
 
-	// ----------------- FreePage, politiques et flush global -----------------
+	// FreePage, politiques et flush global
 
 	/** Représentation simple des politiques de remplacement supportées */
 	public enum ReplacementPolicy {
