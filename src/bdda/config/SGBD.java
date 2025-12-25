@@ -416,5 +416,4 @@ public class SGBD {
         System.out.println(nbSupprimes + " ligne(s) supprimée(s)");
     }
 
-
 }
