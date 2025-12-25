@@ -68,6 +68,9 @@ public class SGBD {
                 else if(command.startsWith("DELETE")){
                     processDeleteCommand(command);
                 }
+                else if(command.startsWith("UPDATE")){
+                    processUpdateCommand(command);
+                }
                 else {
                     System.out.println("Commande inconnue : " + command);
                 }
@@ -381,7 +384,61 @@ public class SGBD {
         return aliasMap;
     }
 
+    private HashMap<String, Relation> extraireAliasUpdate(String commande){
+        HashMap<String, Relation> aliasMap = new HashMap<>();
 
+        // On isole la partie SET ... (jusqu'à WHERE s'il existe)
+        String afterFrom = commande.split("SET")[1].trim();
+
+        if (afterFrom.contains("WHERE")) {
+            afterFrom = afterFrom.split("WHERE")[0].trim();
+        }
+
+        // Découpe par espaces
+        String[] tokens = afterFrom.split(" |\\.");
+
+        //SET TABLE.valeur
+        String tableName = tokens[0];
+        String alias = tokens[1];
+
+        Relation rel = dbManager.getTable(tableName);
+        aliasMap.put(alias, rel);
+
+        return aliasMap;
+    }
+
+    private void processUpdateCommand(String cmd){
+        // 1. Alias
+        HashMap<String, Relation> aliasMap = extraireAliasUpdate(cmd);
+        Relation rel = aliasMap.values().iterator().next();
+        // 2. Conditions
+        ArrayList<Condition> conditions = extraireConditions(cmd);
+        // 3. Scanner existant
+        RelationScanner scanner = new RelationScanner(rel);
+
+        int nbModifiees = 0;
+        Record record;
+
+        while ((record = scanner.getNextRecord()) != null) {
+
+            boolean ok = true;
+            for (Condition c : conditions) {
+                if (!c.evaluerConditionSurRecord(record, aliasMap)) {
+                    ok = false;
+                    break;
+                }
+            }
+
+            if (ok) {
+                RecordId rid = scanner.getCurrentRecordId();
+                rel.deleteRecord(rid);
+                nbModifiees++;
+            }
+        }
+
+        scanner.close();
+        System.out.println(nbModifiees + " ligne(s) mis à jour.");
+    }
 
     private void processDeleteCommand(String cmd) {
         // 1. Alias
