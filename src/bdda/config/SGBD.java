@@ -384,60 +384,88 @@ public class SGBD {
         return aliasMap;
     }
 
-    private HashMap<String, Relation> extraireAliasUpdate(String commande){
-        HashMap<String, Relation> aliasMap = new HashMap<>();
 
-        // On isole la partie SET ... (jusqu'à WHERE s'il existe)
-        String afterFrom = commande.split("SET")[1].trim();
+    private void processUpdateCommand(String cmd) {
 
-        if (afterFrom.contains("WHERE")) {
-            afterFrom = afterFrom.split("WHERE")[0].trim();
-        }
+        try {
+            // 1. Extraire relation + alias
+            String afterUpdate = cmd.replace("UPDATE", "").trim();
+            String[] parts = afterUpdate.split("SET");
 
-        // Découpe par espaces
-        String[] tokens = afterFrom.split(" |\\.");
+            String[] relParts = parts[0].trim().split(" ");
+            String tableName = relParts[0];
+            String alias = (relParts.length > 1) ? relParts[1] : tableName;
 
-        //SET TABLE.valeur
-        String tableName = tokens[0];
-        String alias = tokens[1];
+            Relation rel = dbManager.getTable(tableName);
 
-        Relation rel = dbManager.getTable(tableName);
-        aliasMap.put(alias, rel);
+            HashMap<String, Relation> aliasMap = new HashMap<>();
+            aliasMap.put(alias, rel);
 
-        return aliasMap;
-    }
+            // 2. Extraire SET
+            String setPart = parts[1];
+            String wherePart = null;
 
-    private void processUpdateCommand(String cmd){
-        // 1. Alias
-        HashMap<String, Relation> aliasMap = extraireAliasUpdate(cmd);
-        Relation rel = aliasMap.values().iterator().next();
-        // 2. Conditions
-        ArrayList<Condition> conditions = extraireConditions(cmd);
-        // 3. Scanner existant
-        RelationScanner scanner = new RelationScanner(rel);
+            if (setPart.contains("WHERE")) {
+                wherePart = setPart.split("WHERE")[1].trim();
+                setPart = setPart.split("WHERE")[0].trim();
+            }
 
-        int nbModifiees = 0;
-        Record record;
+            // 3. Parsing des affectations
+            HashMap<String, String> setMap = extraireSet(setPart);
 
-        while ((record = scanner.getNextRecord()) != null) {
+            // 4. Conditions
+            ArrayList<Condition> conditions = new ArrayList<>();
+            if (wherePart != null) {
+                conditions = extraireConditions("WHERE " + wherePart);
+            }
 
-            boolean ok = true;
-            for (Condition c : conditions) {
-                if (!c.evaluerConditionSurRecord(record, aliasMap)) {
-                    ok = false;
-                    break;
+            // 5. Scanner
+            RelationScanner scanner = new RelationScanner(rel);
+
+            int nbUpdate = 0;
+
+            Record record;
+            while ((record = scanner.getNextRecord()) != null) {
+
+                boolean ok = true;
+                for (Condition c : conditions) {
+                    if (!c.evaluerConditionSurRecord(record, aliasMap)) {
+                        ok = false;
+                        break;
+                    }
+                }
+
+                if (ok) {
+                    //Appliquer le set, supprimé l'ancien record, écrire le nouveau avec les valeurs à jours
+                    appliquerSet(record, setMap, aliasMap);
+                    RecordId rid = scanner.getCurrentRecordId();
+                    rel.deleteRecord(rid);
+                    rel.writeRecordToDataPage(record, scanner.getCurrentRecordId().getPageId());
+                    nbUpdate++;
                 }
             }
 
-            if (ok) {
-                RecordId rid = scanner.getCurrentRecordId();
-                rel.deleteRecord(rid);
-                nbModifiees++;
-            }
-        }
+            System.out.println(nbUpdate + " record(s) mis à jour");
 
-        scanner.close();
-        System.out.println(nbModifiees + " ligne(s) mis à jour.");
+        } catch (Exception e) {
+            System.out.println("Erreur UPDATE : " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private HashMap<String, String> extraireSet(String setPart) {
+
+        HashMap<String, String> setMap = new HashMap<>();
+
+        String[] assigns = setPart.split(",");
+
+        for (String a : assigns) {
+            String[] parts = a.split("=");
+            String colonne = parts[0].trim();
+            String valeur = parts[1].trim();
+            setMap.put(colonne, valeur);
+        }
+        return setMap;
     }
 
     private void processDeleteCommand(String cmd) {
@@ -471,6 +499,59 @@ public class SGBD {
 
         scanner.close();
         System.out.println(nbSupprimes + " ligne(s) supprimée(s)");
+    }
+
+    private void appliquerSet(Record record, HashMap<String, String> setMap, HashMap<String, Relation> aliasMap) {
+        //Applique le set au record
+        for (String col : setMap.keySet()) {
+            if (!col.contains(".")) {
+                throw new RuntimeException("Colonne invalide : " + col);
+            }
+
+            String[] parts = col.split("\\.");
+            String alias = parts[0];
+            String nomCol = parts[1];
+            //Récuperer l'alias
+            Relation rel = aliasMap.get(alias);
+            if (rel == null) {
+                throw new RuntimeException("Alias inconnu : " + alias);
+            }
+
+            int index = -1;
+            for (int i = 0; i < rel.getInfoColonne().size(); i++) {
+                if (rel.getInfoColonne().get(i).getNom().equalsIgnoreCase(nomCol)) {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index == -1) {
+                throw new RuntimeException("Colonne inconnue : " + nomCol);
+            }
+            String valeurNettoyee = nettoyerConstante(setMap.get(col));
+
+            record.getValeurs().set(index, valeurNettoyee);
+        }
+    }
+
+    private String nettoyerConstante(String valeur) {
+        //Nettoie les valeurs du set (Retire les "" ou '')
+        if (valeur == null) return null;
+
+        valeur = valeur.trim();
+
+        if ((valeur.startsWith("'") && valeur.endsWith("'")) ||
+            (valeur.startsWith("\"") && valeur.endsWith("\""))) {
+            return valeur.substring(1, valeur.length() - 1);
+        }
+
+        return valeur;
+    }
+
+
+    public static void main(String[] args){
+        SGBD sgbd = new SGBD(new DBConfig());
+        sgbd.Run();
     }
 
 }

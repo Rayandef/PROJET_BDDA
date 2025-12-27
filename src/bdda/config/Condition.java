@@ -24,23 +24,22 @@ public class Condition {
     }
 
     // Récupère la relation associée à un terme (ex: Tab2.C7 retourne la relation Tab2)
-    public Relation recupererRelation(String terme, HashMap<String, Relation> aliasMap){ {
-        if(terme.contains(".")){
-            String[] parties = terme.split("\\.");
-            String alias = parties[0];
-            if(aliasMap != null && aliasMap.containsKey(alias)){
-                return aliasMap.get(alias);
-            }
-            for(String key : aliasMap.keySet()){
-                Relation rel = aliasMap.get(key);
-                if(rel.getNom().equalsIgnoreCase(alias)){
-                    return rel;
-                }
+    public Relation recupererRelation(String terme, HashMap<String, Relation> aliasMap) {
+        String[] parties = terme.split("\\.");
+        if (parties.length != 2) {
+            return null;
+        }
+        String alias = parties[0];
+
+        if (aliasMap != null && aliasMap.containsKey(alias)) {
+            return aliasMap.get(alias);
+        }
+        for (Relation rel : aliasMap.values()) {
+            if (rel.getNom().equalsIgnoreCase(alias)) {
+                return rel;
             }
         }
-        System.out.println("Aucune relation trouvée pour le terme : " + terme);
         return null;
-        }
     }
 
     //méthode qui récupère les valeurs d'une colonne donnée dans une relation associée à un terme (ex: Tab2.AA renvoie les valeurs de la colonne AA dans la relation Tab2)
@@ -207,11 +206,7 @@ public class Condition {
     }
 
     //méthode qui évalue une condition pour un index donné
-    public boolean evaluerConditionIndex(
-        int index,
-        HashMap<String, Relation> aliasMap) {
-        String termeGauche = gauche;
-        String termeDroite = droite;
+    public boolean evaluerConditionIndex(int index,HashMap<String, Relation> aliasMap) {String termeGauche = gauche;String termeDroite = droite;
         // Récupère et convertit la valeur de gauche
         Object valeurGauche = convertirValeur(recupererValeursColonne(termeGauche, aliasMap).get(index), recupererColonne(termeGauche, aliasMap));
 
@@ -243,12 +238,12 @@ public class Condition {
         Object valeurDroite;
         InfoColonne<String, String> colonneReference = null;
 
-        //pour le terme de gauche
-        if (gauche.contains(".")) {
-            // gauche = colonne
-            InfoColonne<String, String> colGauche = recupererColonne(gauche, aliasMap);
-            int indexGauche = recupererIndexColonne(gauche, aliasMap);
+        //terme gauche
+        InfoColonne<String, String> colGauche = recupererColonne(gauche, aliasMap);
+        int indexGauche = recupererIndexColonne(gauche, aliasMap);
 
+        if (colGauche != null && indexGauche != -1) {
+            // gauche = colonne
             valeurGauche = convertirValeur(record.getValeurs().get(indexGauche), colGauche);
             colonneReference = colGauche;
         } else {
@@ -256,14 +251,13 @@ public class Condition {
             valeurGauche = nettoyerConstante(gauche);
         }
 
-        //Pour le terme de droite
-        if (droite.contains(".")) {
+        //erme droite
+        InfoColonne<String, String> colDroite = recupererColonne(droite, aliasMap);
+        int indexDroite = recupererIndexColonne(droite, aliasMap);
+
+        if (colDroite != null && indexDroite != -1) {
             // droite = colonne
-            InfoColonne<String, String> colDroite = recupererColonne(droite, aliasMap);
-            int indexDroite = recupererIndexColonne(droite, aliasMap);
-
             valeurDroite = convertirValeur(record.getValeurs().get(indexDroite), colDroite);
-
             if (colonneReference == null) {
                 colonneReference = colDroite;
             }
@@ -271,21 +265,31 @@ public class Condition {
             // droite = constante
             valeurDroite = nettoyerConstante(droite);
         }
+        //Conversionnécessaire 
+        if (colonneReference != null) {
+            if (!(valeurGauche instanceof Number) && !(valeurGauche instanceof String)) {
+                valeurGauche = convertirValeur(valeurGauche.toString(), colonneReference);
+            }
+            if (!(valeurDroite instanceof Number) && !(valeurDroite instanceof String)) {
+                valeurDroite = convertirValeur(valeurDroite.toString(), colonneReference);
+            }
+        }
 
-
-        //On convertit les valeurs
-        if (!(valeurGauche instanceof Number) && !(valeurGauche instanceof String)) {valeurGauche = convertirValeur(valeurGauche.toString(), colonneReference);}
-        if (!(valeurDroite instanceof Number) && !(valeurDroite instanceof String)) {valeurDroite = convertirValeur(valeurDroite.toString(), colonneReference);}
-
-        return comparer(valeurGauche, valeurDroite, operateur, colonneReference);
-    }
+    return comparer(valeurGauche, valeurDroite, operateur, colonneReference);
+}
 
 
     //méthode qui récupère l'index d'une colonne donnée dans une relation associée à un terme (ex: Tab2.AA renvoie l'index de la colonne AA dans la relation Tab2)
     public int recupererIndexColonne(String terme, HashMap<String, Relation> aliasMap) {
         String[] parties = terme.split("\\.");
+        if (parties.length != 2) {
+            return -1;
+        }
         String nomColonne = parties[1];
         Relation rel = recupererRelation(terme, aliasMap);
+        if (rel == null) {
+            return -1;
+        }
         ArrayList<InfoColonne<String, String>> colonnes = (ArrayList<InfoColonne<String, String>>) rel.getInfoColonne();
 
         for (int i = 0; i < colonnes.size(); i++) {
