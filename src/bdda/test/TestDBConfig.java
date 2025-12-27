@@ -109,4 +109,8 @@ public class TestDBConfig {
         DBConfig testconf5 = testConstructeurTD3("."+File.separator+"DB"+File.separator+"binData", 32, 512, 20, "FIFO");
         System.out.println("===== Fin des tests DBConfig =====");
     }
+
+    public static void main(String[] args) {
+        runTests();
+    }
 }

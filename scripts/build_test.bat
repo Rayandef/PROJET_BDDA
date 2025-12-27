@@ -1,4 +1,8 @@
 @echo off
 if not exist bin mkdir bin
-javac src\bdda\config\DBConfig.java src\bdda\config\PageID.java src\bdda\test\TestDBConfig.java src\bdda\config\DiskManager.java src\bdda\test\DiskManagerTests.java src\bdda\config\BufferManager.java src\bdda\test\BufferManagerTests.java src\bdda\Test.java
-java -cp bin;config bdda.Test
+javac -d bin -cp src src\bdda\config\* src\bdda\test\*
+java -cp bin bdda/test/BufferManagerTests
+java -cp bin bdda/test/DiskManagerTests
+java -cp bin bdda/test/RelationTests
+java -cp bin bdda/test/TestDBConfig
+java -cp bin bdda/test/SGBDTests
