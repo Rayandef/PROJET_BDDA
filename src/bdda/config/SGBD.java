@@ -540,8 +540,8 @@ public class SGBD {
         }
     }
 
-    private String nettoyerConstante(String valeur) {
-        //Nettoie les valeurs du set (Retire les "" ou '')
+    public static String nettoyerConstante(String valeur) {
+        //Nettoie les valeurs d'une constante (Retire les "" ou '')
         if (valeur == null) return null;
 
         valeur = valeur.trim();

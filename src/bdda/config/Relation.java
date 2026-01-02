@@ -204,13 +204,12 @@ public class Relation {
                     break;
 
                 case "CHAR":
+                    valeur = SGBD.nettoyerConstante(valeur);
                     int length = Size.CHAR.getTaille() ;
                     if (valeur.length() > length) {
                         valeur = valeur.substring(0, length);
-                    } else if (valeur.length() < length) {
-                        StringBuilder sb = new StringBuilder(valeur);
-                        while (sb.length() < length) sb.append(' ');
-                        valeur = sb.toString();
+                    } else {
+                        valeur = String.format("%-" + length + "s", valeur);
                     }
 
                     // Écriture caractère par caractère
@@ -219,6 +218,7 @@ public class Relation {
                     break;
 
                 case "VARCHAR":
+                    valeur = SGBD.nettoyerConstante(valeur);
                     int maxLength = Size.VARCHAR.getTaille() ;
                     if (valeur.length() > maxLength) {
                         valeur = valeur.substring(0, maxLength);

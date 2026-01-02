@@ -151,7 +151,7 @@ public class Condition {
         String type = col.getType().toUpperCase();
 
         switch (type) {
-            case "INT", "FLOAT": {
+            case "INT": {
                 double a = Double.parseDouble(gauche.toString());
                 double b = Double.parseDouble(droite.toString());
 
@@ -164,6 +164,22 @@ public class Condition {
                     case ">=" -> a >= b;
                     default   -> false;
                 };
+            }
+            case "FLOAT":{
+                double a = Double.parseDouble(gauche.toString());
+            double b = Double.parseDouble(droite.toString());
+
+            double EPS = 1e-6;
+
+            return switch (op) {
+                case "="  -> Math.abs(a - b) < EPS;
+                case "<>" -> Math.abs(a - b) >= EPS;
+                case "<"  -> a < b - EPS;
+                case ">"  -> a > b + EPS;
+                case "<=" -> a < b + EPS;
+                case ">=" -> a > b - EPS;
+                default   -> false;
+            };
             }
 
             case "CHAR", "VARCHAR": {
@@ -238,34 +254,30 @@ public class Condition {
         Object valeurDroite;
         InfoColonne<String, String> colonneReference = null;
 
-        //terme gauche
-        InfoColonne<String, String> colGauche = recupererColonne(gauche, aliasMap);
-        int indexGauche = recupererIndexColonne(gauche, aliasMap);
+        // ===== TERME GAUCHE =====
+        if (estColonne(gauche, aliasMap)) {
+            InfoColonne<String, String> colGauche = recupererColonne(gauche, aliasMap);
+            int indexGauche = recupererIndexColonne(gauche, aliasMap);
+            if (colGauche == null || indexGauche == -1) return false;
 
-        if (colGauche != null && indexGauche != -1) {
-            // gauche = colonne
             valeurGauche = convertirValeur(record.getValeurs().get(indexGauche), colGauche);
             colonneReference = colGauche;
         } else {
-            // gauche = constante
             valeurGauche = nettoyerConstante(gauche);
         }
 
-        //erme droite
-        InfoColonne<String, String> colDroite = recupererColonne(droite, aliasMap);
-        int indexDroite = recupererIndexColonne(droite, aliasMap);
-
-        if (colDroite != null && indexDroite != -1) {
-            // droite = colonne
+        // ===== TERME DROITE =====
+        if (estColonne(droite, aliasMap)) {
+            InfoColonne<String, String> colDroite = recupererColonne(droite, aliasMap);
+            int indexDroite = recupererIndexColonne(droite, aliasMap);
+            if (colDroite == null || indexDroite == -1) return false;
             valeurDroite = convertirValeur(record.getValeurs().get(indexDroite), colDroite);
-            if (colonneReference == null) {
-                colonneReference = colDroite;
-            }
+            if (colonneReference == null) colonneReference = colDroite;
         } else {
-            // droite = constante
             valeurDroite = nettoyerConstante(droite);
         }
-        //Conversionnécessaire 
+
+        // ===== CONVERSION DES CONSTANTES =====
         if (colonneReference != null) {
             if (!(valeurGauche instanceof Number) && !(valeurGauche instanceof String)) {
                 valeurGauche = convertirValeur(valeurGauche.toString(), colonneReference);
@@ -275,8 +287,8 @@ public class Condition {
             }
         }
 
-    return comparer(valeurGauche, valeurDroite, operateur, colonneReference);
-}
+        return comparer(valeurGauche, valeurDroite, operateur, colonneReference);
+    }
 
 
     //méthode qui récupère l'index d'une colonne donnée dans une relation associée à un terme (ex: Tab2.AA renvoie l'index de la colonne AA dans la relation Tab2)
@@ -298,6 +310,12 @@ public class Condition {
             }
         }
         return -1; // pas trouvé
+    }
+
+    //Vérifie qu'un terme est une colonne ou pas
+    private boolean estColonne(String terme, HashMap<String, Relation> aliasMap) {
+        if (!terme.contains(".")) return false;
+            return recupererRelation(terme, aliasMap) != null;
     }
 
 }
