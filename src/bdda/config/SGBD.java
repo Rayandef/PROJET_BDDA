@@ -338,6 +338,7 @@ public class SGBD {
 
         try (BufferedReader br = new BufferedReader(new FileReader(pathFileCSV))) {
             String line ;
+            double i = 0 ;
             while ((line = br.readLine()) != null){
                 String[] valeurs = line.split(",");
                 List<String> valeurList = new ArrayList<>();
@@ -348,7 +349,12 @@ public class SGBD {
                 if (table.estInserable(record)){
                     table.insertRecord(record);
                 }
+                i++ ;
+                if (i%1000 == 0){
+                    System.out.println(i);
+                }
             }
+            System.out.println(pathFileCSV + " APPEND INTO " + table);
         } catch (IOException e) {
             System.out.println("Erreur lors de la lecture du fichier .csv : " + e);
         }
