@@ -35,14 +35,14 @@ public class SGBD {
     /** Méthode pour lancer le programme */
     public void Run() {
         Scanner sc = new Scanner(System.in);
-
         while (true) {
             try {
                 String command = sc.nextLine().trim();
 
                 if (command.equalsIgnoreCase("EXIT")) {
                     processExitCommand();
-                    break;
+                    sc.close();
+                    System.exit(0);
                 }
                 else if (command.startsWith("CREATE TABLE")) {
                     processCreateTableCommand(command);
@@ -81,8 +81,6 @@ public class SGBD {
                 System.out.println(e);
             }
         }
-
-        sc.close();
     }
 
     /** Methode pour sortir du programme */
@@ -369,7 +367,6 @@ public class SGBD {
 
         try (BufferedReader br = new BufferedReader(new FileReader(pathFileCSV))) {
             String line ;
-            double i = 0 ;
             while ((line = br.readLine()) != null){
                 String[] valeurs = line.split(",");
                 List<String> valeurList = new ArrayList<>();
@@ -380,12 +377,8 @@ public class SGBD {
                 if (table.estInserable(record)){
                     table.insertRecord(record);
                 }
-                i++ ;
-                if (i%1000 == 0){
-                    System.out.println(i);
-                }
             }
-            System.out.println(pathFileCSV + " APPEND INTO " + table);
+            System.out.println(pathFileCSV + " APPEND INTO " + table.getNom());
         } catch (IOException e) {
             System.out.println("Erreur lors de la lecture du fichier .csv : " + e);
         }

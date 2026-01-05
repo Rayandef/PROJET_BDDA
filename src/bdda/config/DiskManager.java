@@ -57,7 +57,7 @@ public class DiskManager {
 
             long pageSize = dbConfig.getPageSize();
             long nbPages = destinationFile.length() / pageSize;
-            if (destinationFile.length() >= 32000 ) { // revoir cette condition car inconnu sur la taille max d'un fichier
+            if (destinationFile.length() >= dbConfig.getFileSize() ) {
                 fileIdx++;
                 if (fileIdx >= dbConfig.getDm_maxfilecount()) {
                     System.err.println("Nombre maximal de fichiers atteint !");

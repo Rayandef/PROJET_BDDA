@@ -15,6 +15,8 @@ public class DBConfig {
     private int bm_buffercount;
     /**bm_policy -> variable indiquant la politique de remplacement */
     private String bm_policy;
+    /**fileSize -> variable indiquant la taille des fichiers */
+    private double fileSize;
 
     /**
      * @param dbpath le chemin vers la base de données
@@ -26,6 +28,7 @@ public class DBConfig {
         this.dm_maxfilecount = 512;
         this.bm_buffercount = 20;
         this.bm_policy = "LRU";
+        this.fileSize = 512;
     }
 
     /**Créer une configuration de la base de données selon les variables mises en entrées
@@ -34,7 +37,7 @@ public class DBConfig {
      * @param dm_maxfilecount Le nombre maximum de fichiers Datax.bin
      * @throws Exception
      */
-    public DBConfig(String dbpath, int pageSize, int dm_maxfilecount) throws Exception{
+    public DBConfig(String dbpath, int pageSize, int dm_maxfilecount, double fileSize) throws Exception{
         this(dbpath);
         if(pageSize<=0){
             throw new Exception("On ne peut pas avoir une page de taille nulle ou négative");
@@ -44,6 +47,7 @@ public class DBConfig {
             throw new Exception("On ne peut pas avoir un nombre de fichiers négatif ou nul");
         }
         this.dm_maxfilecount = dm_maxfilecount;
+        this.fileSize = fileSize;
     }
 
     /**
@@ -52,10 +56,11 @@ public class DBConfig {
      * @param dm_maxfilecount Le nombre maximum de fichiers Datax.bin
      * @param bm_buffercount Le nombre maximum de buffer
      * @param bm_policy la politique de remplacement utilisé
+     * @param fileSize La taille d'un fichier
      * @throws Exception
      */
-    public DBConfig(String dbpath, int pageSize, int dm_maxfilecount, int bm_buffercount, String bm_policy) throws Exception{
-        this(dbpath, pageSize, dm_maxfilecount);
+    public DBConfig(String dbpath, int pageSize, int dm_maxfilecount, int bm_buffercount, String bm_policy, double fileSize) throws Exception{
+        this(dbpath, pageSize, dm_maxfilecount, fileSize);
         if(bm_buffercount <= 0){
             throw new Exception("On ne peut pas avoir un nombre de buffer de 0 ou négatif");
         }
@@ -74,7 +79,7 @@ public class DBConfig {
         this.dm_maxfilecount = defaultConfig.dm_maxfilecount;
         this.bm_buffercount = defaultConfig.bm_buffercount;
         this.bm_policy = defaultConfig.bm_policy;
-
+        this.fileSize = defaultConfig.fileSize;
     }
 
     /**
@@ -113,6 +118,13 @@ public class DBConfig {
     }
 
     /**
+     * @return la taille maximum d'un fichier
+     */
+    public double getFileSize(){
+        return this.fileSize;
+    }
+
+    /**
      * Charge la configuration de la base de données depuis un fichier de propriétés.
      * @param fichierConfig Chemin du fichier de configuration
      * @return Un objet DBConfig initialisé avec les valeurs du fichier, ou null en cas d'erreur
@@ -129,7 +141,8 @@ public class DBConfig {
             int dm_maxfilecount = Integer.parseInt(props.getProperty("dm_maxfilecount"));
             int bm_buffercount = Integer.parseInt(props.getProperty("bm_buffercount"));
             String bm_policy = props.getProperty("bm_policy");
-            config = new DBConfig(convertirFileSeparator(dbpath), pageSize, dm_maxfilecount, bm_buffercount, bm_policy);
+            double fileSize = Double.parseDouble(props.getProperty("fileSize"));
+            config = new DBConfig(convertirFileSeparator(dbpath), pageSize, dm_maxfilecount, bm_buffercount, bm_policy, fileSize);
         } catch (Exception e) {
             System.out.println("Erreur lecture config: " + e.getMessage());
         }
@@ -152,6 +165,6 @@ public class DBConfig {
      */
     @Override
     public String toString() {
-        return "DBConfig{" +"dbpath='" + this.dbpath + File.separator + ", pageSize=" + this.pageSize +", dm_maxfilecount=" + this.dm_maxfilecount + ", bm_buffercount=" + this.bm_buffercount + ", bm_policy =" + this.bm_policy + '}';
+        return "DBConfig{" +"dbpath='" + this.dbpath + File.separator + ", pageSize=" + this.pageSize +", dm_maxfilecount=" + this.dm_maxfilecount + ", bm_buffercount=" + this.bm_buffercount + ", bm_policy =" + this.bm_policy + ", fileSize =" + this.fileSize + '}';
     }
 }
