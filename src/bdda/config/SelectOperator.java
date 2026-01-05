@@ -3,11 +3,23 @@ package bdda.config;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+/** Classe permettant de gérer la selection des tuples */
 public class SelectOperator implements IRecordIterator{
+    /** Iterator */
     private IRecordIterator fils;
-    private ArrayList<Condition> conditions; //conditions de selection
-    private HashMap<String, Relation> aliasMap; //map des alias pour evaluer les conditions
 
+    /** conditions de selection */
+    private ArrayList<Condition> conditions;
+
+    /** map des alias pour evaluer les conditions */
+    private HashMap<String, Relation> aliasMap;
+
+    /**
+     * Construit un SelectOperator
+     * @param fils Iterator
+     * @param conditions Liste de conditions de la commande SELECT
+     * @param aliasMap Map des alias
+     */
     public SelectOperator(IRecordIterator fils, ArrayList<Condition> conditions,  HashMap<String, Relation> aliasMap) {
         this.fils = fils;
         this.conditions = conditions;
@@ -15,6 +27,9 @@ public class SelectOperator implements IRecordIterator{
     }
 
     @Override
+    /** 
+     * Implémente getNextRecord() de IRecordIterator
+     */
     public Record getNextRecord() {
         Record record;
         while(((record = fils.getNextRecord()) != null)) {
@@ -33,11 +48,17 @@ public class SelectOperator implements IRecordIterator{
     }
 
     @Override
+    /**
+     * Implémente reset() de IRecordIterator
+     */
     public void close() {
         fils.close();
     }
 
     @Override
+    /** 
+     * Implémente getNextRecord de IRecordIterator 
+     */
     public void reset() {
         fils.reset();
     }

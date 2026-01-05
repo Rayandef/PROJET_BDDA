@@ -10,16 +10,20 @@ import java.util.Scanner;
 
 import bdda.config.Relation.Size;
 
-
+/** Classe représentant un SGBD */
 public class SGBD {
-
-    private DBConfig config;
+    /** Instance pour gérer le Disk Manager */
     private DiskManager diskManager;
+
+    /** Instance pour gérer le Buffer Manager */
     private BufferManager bufferManager;
+
+    /** Instance pour gérer le DB Manager */
     private DBManager dbManager;
 
-    public SGBD(DBConfig config) {
-        this.config = config;
+    /** Crée une instance de SGBD et instancie le Disk Manager, le Buffer Manager et le DB Manager */
+    public SGBD() {
+        DBConfig config = new DBConfig();
         this.diskManager = new DiskManager(config);
         this.bufferManager = new BufferManager(config, diskManager);
         this.dbManager = new DBManager(config, diskManager, bufferManager);
@@ -30,6 +34,7 @@ public class SGBD {
         dbManager.loadState();
     }
 
+    /** Méthode pour lancer le programme */
     public void Run() {
         Scanner sc = new Scanner(System.in);
 
@@ -82,15 +87,17 @@ public class SGBD {
         sc.close();
     }
 
-
+    /** Methode pour sortir du programme */
     private void processExitCommand() {
         dbManager.saveState();
         bufferManager.FlushBuffers();
         diskManager.finish();
-        System.out.println("EXIT");
     }
 
 
+    /** Crée une relation / table 
+     * @param cmd La commande écrite dans le terminal 
+     */
     private void processCreateTableCommand(String cmd) {
         try {
             String after = cmd.replace("CREATE TABLE", "").trim();
@@ -130,7 +137,10 @@ public class SGBD {
         }
     }
 
-
+    /**
+     * Supprime une relation / table
+     * @param cmd La commande écrite dans le terminal 
+     */
     private void processDropTableCommand(String cmd) {
         String nom = cmd.replace("DROP TABLE", "").trim();
 
@@ -147,6 +157,7 @@ public class SGBD {
     }
 
 
+    /** Supprime toutes les relations / tables */
     private void processDropAllTablesCommand() {
 
         for (String nom : new ArrayList<>(dbManager.getTables().keySet())) {
@@ -163,17 +174,24 @@ public class SGBD {
         System.out.println("ALL TABLES DROPPED");
     }
 
-
+    /**
+     * Affiche les colonnes d'une relation / table
+     * @param cmd La commande écrite dans le terminal 
+     */
     private void processDescribeTableCommand(String cmd) {
         String nom = cmd.replace("DESCRIBE TABLE", "").trim();
         dbManager.describeTable(nom);
     }
 
-
+    /** Affiche les colonnes de toutes les relations / tables */
     private void processDescribeAllTablesCommand() {
         dbManager.describeAllTables();
     }
 
+    /**
+     * Affiche les données sélectionnés par la commande
+     * @param cmd La commande écrite dans le terminal 
+     */
     private void processSelectCommand(String cmd) {
         try {
             // 1. Récupérer les relations et les alias
@@ -220,7 +238,11 @@ public class SGBD {
     }
 
 
-    //méthode qui gère les alias dans une commande et retourne une map des alias contenant le nom de l'alias et la relation correspondante
+    /**
+     * Méthode qui gère les alias dans une commande 
+     * et retourne une map des alias contenant le nom de l'alias et la relation correspondante
+     * @param cmd La commande écrite dans le terminal 
+     */
     private HashMap<String, Relation> extraireAlias(String commande) {
 
         HashMap<String, Relation> aliasMap = new HashMap<>();
@@ -252,7 +274,10 @@ public class SGBD {
     }
 
 
-    //Méthode qui vérifie si une commande contient une condition
+    /** 
+     * Méthode qui vérifie si une commande contient une condition
+     * @param cmd La commande écrite dans le terminal 
+     */
     private boolean contientCondition(String command){
         String[] elements = command.split(" ");
         for(String element : elements){
@@ -263,7 +288,11 @@ public class SGBD {
         return false;
     }
 
-    //Méthode qui extrait les conditions d'une commande et les retourne sous forme d'une liste d'objets Condition
+    /** 
+     * Méthode qui extrait les conditions d'une commande 
+     * et les retourne sous forme d'une liste d'objets Condition
+     * @param cmd La commande écrite dans le terminal 
+     */
     private ArrayList<Condition> extraireConditions(String command){
         ArrayList<Condition> conditions = new ArrayList<>();
         final String[] OPERATEURS = {"<=", ">=", "<>", "=", "<", ">"};
@@ -289,6 +318,10 @@ public class SGBD {
         return conditions;
     }
 
+    /** 
+     * Récupère les colonnes concernées par la commande SELECT
+     * @param cmd La commande écrite dans le terminal 
+     */
     private ArrayList<String> extraireColonnesSelect(String cmd) {
 
         ArrayList<String> colonnes = new ArrayList<>();
@@ -306,6 +339,10 @@ public class SGBD {
         return colonnes;
     }
 
+    /**
+     * Ajoute un record / tuple dans une relation
+     * @param cmd La commande écrite dans le terminal 
+     */
     private void processInsertIntoCommand(String cmd){
         String[] command = cmd.split("\\s");
         Relation table = dbManager.getTable(command[2]);
@@ -326,6 +363,10 @@ public class SGBD {
         }
     }
 
+    /**
+     * Ajoute les tuples contenus dans un fichier .csv directement dans une relation
+     * @param cmd La commande écrite dans le terminal 
+     */
     private void processAppendIntoCommand(String cmd){
         String[] command = cmd.split("\\s");
         Relation table = dbManager.getTable(command[2]);
@@ -360,6 +401,11 @@ public class SGBD {
         }
     }
 
+    /**
+     * Recupère l'alias utilisé dans la commande DELETE
+     * @param cmd La commande écrite dans le terminal 
+     * @return La HashMap des alias de la relation
+     */
     private HashMap<String, Relation> extraireAliasDelete(String cmd) {
 
         HashMap<String, Relation> aliasMap = new HashMap<>();
@@ -390,7 +436,10 @@ public class SGBD {
         return aliasMap;
     }
 
-
+    /**
+     * Permet d'actualiser les tuples sélectionnés par la commande UPDATE dans une relation
+     * @param cmd La commande écrite dans le terminal 
+     */
     private void processUpdateCommand(String cmd) {
 
         try {
@@ -459,6 +508,9 @@ public class SGBD {
         }
     }
 
+    /**
+     * Permet de récupérer les affectations des records
+     */
     private HashMap<String, String> extraireSet(String setPart) {
 
         HashMap<String, String> setMap = new HashMap<>();
@@ -474,6 +526,10 @@ public class SGBD {
         return setMap;
     }
 
+    /**
+     * Supprime les tuples selectionnées par la commande DELETE dans une relation
+     * @param cmd La commande écrite dans le terminal 
+     */
     private void processDeleteCommand(String cmd) {
         // 1. Alias
         HashMap<String, Relation> aliasMap = extraireAliasDelete(cmd);
@@ -507,6 +563,12 @@ public class SGBD {
         System.out.println(nbSupprimes + " ligne(s) supprimée(s)");
     }
 
+    /**
+     * Applique le set au record
+     * @param record
+     * @param setMap
+     * @param aliasMap
+     */
     private void appliquerSet(Record record, HashMap<String, String> setMap, HashMap<String, Relation> aliasMap) {
         //Applique le set au record
         for (String col : setMap.keySet()) {
@@ -540,6 +602,11 @@ public class SGBD {
         }
     }
 
+    /**
+     * Permet de nettoyer une constante (retire les guillemets)
+     * @param valeur la constante à nettoyer
+     * @return la constante nettoyé
+     */
     public static String nettoyerConstante(String valeur) {
         //Nettoie les valeurs d'une constante (Retire les "" ou '')
         if (valeur == null) return null;
@@ -554,9 +621,11 @@ public class SGBD {
         return valeur;
     }
 
-
+    /** Point d'entrée du programme
+     * @param args
+     */
     public static void main(String[] args){
-        SGBD sgbd = new SGBD(new DBConfig());
+        SGBD sgbd = new SGBD();
         sgbd.Run();
     }
 

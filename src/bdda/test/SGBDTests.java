@@ -7,7 +7,7 @@ import java.io.ByteArrayInputStream;
 public class SGBDTests {
 
     public static void testSGBD(){
-        SGBD sgbd = new SGBD(new DBConfig());
+        SGBD sgbd = new SGBD();
         final InputStream is = System.in;
 
         String cmd = "CREATE TABLE Tab1 (C1:FLOAT,C2:INT)\n";

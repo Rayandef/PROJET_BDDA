@@ -9,8 +9,6 @@ import java.util.List;
  * Classe correspondant à la relation entre une entité et une association"
  */
 public class Relation {
-
-
     /** Nom de la relation */
     private String nom;
 

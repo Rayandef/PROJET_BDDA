@@ -10,8 +10,6 @@ import bdda.config.PageID;
 
 /**
  * Classe de tests pour BufferManager
- * @author Rayan
- * @version 1.0
  */
 public class BufferManagerTests {
 
