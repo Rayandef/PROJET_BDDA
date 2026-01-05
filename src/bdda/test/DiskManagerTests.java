@@ -8,8 +8,6 @@ import java.nio.ByteBuffer;
 
 /**
  * Classe de tests pour DiskManager 
- * @author Rayan, Anne-Louis
- * @version 1.0
  */
 public class DiskManagerTests {
 

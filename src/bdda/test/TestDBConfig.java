@@ -44,6 +44,7 @@ public class TestDBConfig {
      * Exécute tous les tests sur la classe DBConfig.
      * Affiche les résultats des différents scénarios de test sur la console.
      */
+    @SuppressWarnings("unused")
     public static void runTests() {
         System.out.println("===== Tests DBConfig =====");
         System.out.println("Test1");

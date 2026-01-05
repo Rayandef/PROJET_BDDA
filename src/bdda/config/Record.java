@@ -3,7 +3,7 @@ package bdda.config;
 import java.util.ArrayList;
 import java.util.List;
 /**
- * Classe représentant l'enregitrement des valeurs de chaque tuple dans une liste de chaîne de caractère
+ * Classe représentant l'enregistrement des valeurs de chaque tuple dans une liste de chaîne de caractère
  */
 public class Record {
 

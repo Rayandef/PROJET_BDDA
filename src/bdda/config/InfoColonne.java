@@ -1,5 +1,6 @@
 package bdda.config;
 
+/** Classe représentant une colonne d'une relation */
 public class InfoColonne<nom extends CharSequence, type extends CharSequence>{
 
     /** Nom de la colonne */

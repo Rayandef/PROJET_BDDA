@@ -3,8 +3,7 @@ package bdda.config;
 import java.io.File;
 import java.io.FileInputStream;
 import java.util.Properties;
-    /** Classe permettant le chargement de la base de donnée
-    */
+/** Classe permettant le chargement de la base de donnée */
 public class DBConfig {
     /**dbpath -> variable indiquant l'emplacement de la base de données */
     private String dbpath;
@@ -18,7 +17,7 @@ public class DBConfig {
     private String bm_policy;
 
     /**
-     * @param dbpath
+     * @param dbpath le chemin vers la base de données
      * @throws Exception
      */
     public DBConfig(String dbpath) throws Exception{
@@ -48,11 +47,11 @@ public class DBConfig {
     }
 
     /**
-     * @param dbpath
-     * @param pageSize
-     * @param dm_maxfilecount
-     * @param bm_buffercount
-     * @param bm_policy
+     * @param dbpath Le chemin vers la base de données
+     * @param pageSize La taille des pages de données
+     * @param dm_maxfilecount Le nombre maximum de fichiers Datax.bin
+     * @param bm_buffercount Le nombre maximum de buffer
+     * @param bm_policy la politique de remplacement utilisé
      * @throws Exception
      */
     public DBConfig(String dbpath, int pageSize, int dm_maxfilecount, int bm_buffercount, String bm_policy) throws Exception{
@@ -67,7 +66,7 @@ public class DBConfig {
         }
     }
 
-    /**Créer une configuaration par défaut */
+    /**Créer une configuaration par défaut basé sur le fichier dbconfig.properties*/
     public DBConfig(){
         DBConfig defaultConfig = DBConfig.loadDBConfig("config"+File.separator+"dbconfig.properties"); 
         this.dbpath = defaultConfig.dbpath;
@@ -137,6 +136,11 @@ public class DBConfig {
         return config;
     }
 
+    /**
+     * Recupere le chemin vers la base de données et l'adapte au système d'exploitation utilisé.
+     * @param dbpath le chemin vers la base de données.
+     * @return le chemin vers la base de données adapté à l'OS de l'utilisateur.
+     */
     private static String convertirFileSeparator(String dbpath){
         String [] temp = dbpath.split("/");
         return temp[0] + File.separator + temp[1] + File.separator + temp[2];

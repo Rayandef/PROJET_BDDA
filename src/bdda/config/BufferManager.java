@@ -4,18 +4,19 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.ArrayList;
 
+/** Classe représentant l'organisation des buffers */
 public class BufferManager {
-	/** Configuration de la base de données (référence ou copie selon besoin).
-	 * Note: en Java les objets sont référencés — ici on conserve une référence
-	 * vers la configuration. */
+	/** Configuration de la base de données.
+	 * 
+	 */
 	private DBConfig dbConfig;
 
-	/** Référence vers l'instance de DiskManager fournie. NE PAS DUPLIQUER/CLONER. */
+	/** Référence vers l'instance de DiskManager fournie*/
 	private DiskManager diskManager;
 
 	/**
 	 * Constructeur principal. Stocke une référence vers la configuration et une
-	 * référence vers l'instance de DiskManager (ne clone pas DiskManager).
+	 * référence vers l'instance de DiskManager.
 	 *
 	 * @param dbConfig instance de configuration (peut être conservée par référence)
 	 * @param diskManager instance de DiskManager à utiliser (ne pas dupliquer)
@@ -28,14 +29,12 @@ public class BufferManager {
 		if (diskManager == null) {
 			throw new IllegalArgumentException("diskManager ne peut pas être null");
 		}
-		// On conserve simplement les références (pas de clone de DiskManager)
 		this.dbConfig = dbConfig;
 		this.diskManager = diskManager;
 	}
 
 	/**
 	 * Retourne la configuration de la base.
-	 *
 	 * @return instance de DBConfig
 	 */
 	public DBConfig getDbConfig() {
@@ -44,7 +43,6 @@ public class BufferManager {
 
 	/**
 	 * Retourne le DiskManager associé.
-	 *
 	 * @return instance de DiskManager
 	 */
 	public DiskManager getDiskManager() {
@@ -63,7 +61,7 @@ public class BufferManager {
 		for (int i = 0; i < numBuffers; i++) {
 			BufferFrame f = new BufferFrame();
 			f.buffer = ByteBuffer.allocate(pageSize);
-			f.pageID = null; // non utilisé
+			f.pageID = null;
 			f.dirty = false;
 			f.lastUsed = 0L;
 			f.pinCount = 0;
@@ -75,7 +73,6 @@ public class BufferManager {
 	 * Délègue la sauvegarde / fin au DiskManager. 
 	 */
 	public void finish() {
-		// flush all dirty buffers before finishing
 		for (BufferFrame f : this.frames) {
 			if (f != null && f.pageID != null && f.dirty) {
 				flushFrame(f);
@@ -86,7 +83,6 @@ public class BufferManager {
 
 	/** 
 	 * Alloue une page en déléguant au DiskManager.
-	 * 
 	 * @return identifiant de la page allouée
 	 */
 	public PageID allocPage() {
@@ -95,7 +91,6 @@ public class BufferManager {
 
 	/** 
 	 * Désalloue une page en la passant au DiskManager. 
-	 * 
 	 * @param pageID identifiant de la page à désallouer
 	 */
 	public void deAllocPage(PageID pageID) {
@@ -104,8 +99,7 @@ public class BufferManager {
 
 	/** 
 	 * Lit une page en déléguant au DiskManager. 
-	 * 
-	 * * @param pageID identifiant de la page
+	 * @param pageID identifiant de la page
 	 * @param buff buffer destination
 	 */
 	public void readPage(PageID pageID, ByteBuffer buff) {
@@ -114,7 +108,6 @@ public class BufferManager {
 
 	/** 
 	 * Écrit une page en déléguant au DiskManager. 
-	 * 
 	 * @param pageID identifiant de la page
 	 * @param buff buffer source
 	 */
@@ -138,14 +131,13 @@ public class BufferManager {
 		PageID pageID;
 		ByteBuffer buffer;
 		boolean dirty;
-		long lastUsed; // plus grand => plus récemment utilisé
-		int pinCount; // nombre de pins (appels getPage non relachés)
+		long lastUsed;
+		int pinCount;
 	}
 
 	/**
 	 * Récupère (ou remplace) un buffer contenant la page demandée.
 	 * Politique de remplacement: LRU basique.
-	 *
 	 * @param pageID id de la page demandée
 	 * @return ByteBuffer géré par le BufferManager contenant la page (prêt en lecture)
 	 */
@@ -159,18 +151,15 @@ public class BufferManager {
 		for (BufferFrame f : this.frames) {
 			if (f.pageID != null && f.pageID.getFileIdx() == pageID.getFileIdx()
 					&& f.pageID.getPageIdx() == pageID.getPageIdx()) {
-				// hit
 				f.lastUsed = ++this.usageCounter;
 				// incrémente le pin_count car l'appelant obtient une référence au buffer
 				f.pinCount = f.pinCount + 1;
-				// positionner le buffer pour lecture par l'appelant
 				f.buffer.rewind();
 				return f.buffer;
 			}
 			if (f.pageID == null && freeFrame == null) {
 				freeFrame = f;
 			}
-			// On ne choisit comme candidat LRU qu'un frame non piné
 			if (f.pinCount == 0 && f.lastUsed < oldest) {
 				oldest = f.lastUsed;
 			}
@@ -181,7 +170,6 @@ public class BufferManager {
 		if (freeFrame != null) {
 			target = freeFrame;
 		} else {
-			// choisir un victim non piné selon la politique courante
 			if (this.currentPolicy == ReplacementPolicy.MRU) {
 				// MRU: choisir le plus récent (max lastUsed)
 				long newest = Long.MIN_VALUE;
@@ -215,7 +203,6 @@ public class BufferManager {
 		target.pageID = pageID;
 		target.buffer.clear();
 		this.diskManager.readPage(pageID, target.buffer);
-		// après lecture, DiskManager fait flip(); nous repositionnons au début
 		target.buffer.rewind();
 		target.dirty = false;
 		// le buffer est maintenant détenu par l'appelant -> pinCount = 1
@@ -226,13 +213,11 @@ public class BufferManager {
 
 	/** 
 	 * Ecrit le contenu du frame sur le disque via DiskManager 
-	 * 
 	 * @param f buffer à écrire
 	 */
 	private void flushFrame(BufferFrame f) {
 		if (f == null || f.pageID == null) return;
 		try {
-			// prépare buffer pour écriture: DiskManager.writePage attend un buffer prêt à être lu
 			f.buffer.rewind();
 			this.diskManager.writePage(f.pageID, f.buffer);
 			f.dirty = false;
@@ -262,7 +247,6 @@ public class BufferManager {
 	/**
 	 * Libère une page précédemment récupérée par getPage. Ne doit appeler aucun
 	 * DiskManager. Décrémente le pin_count et met à jour le flag dirty si demandé.
-	 *
 	 * @param pageID page à libérer
 	 * @param valdirty si true, marque le buffer comme dirty
 	 */
@@ -284,7 +268,6 @@ public class BufferManager {
 				return;
 			}
 		}
-		// si on n'a pas trouvé la page, on ignore (ou on pourrait lever une erreur)
 	}
 
 	/**

@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/** Classe permettant de gérer la base de données */
 public class DBManager {
 
     private DBConfig config;
@@ -190,6 +191,10 @@ public class DBManager {
         }
     }
 
+    /**
+     * Récupère les relations dans la base de données
+     * @return la map des relations avec leur nom comme clé
+     */
     public Map<String, Relation> getTables() {
         return tables;
     }

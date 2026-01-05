@@ -4,16 +4,30 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 public class ProjectOperator implements IRecordIterator{
+    /** Iterator */
     private IRecordIterator fils;
-    private ArrayList<String> nomsColonnes; //noms des colonnes à projeter
-    private HashMap<String, Relation> aliasMap; //map des alias pour evaluer les colonnes
 
+    /** Nom des colonnes à projeter */
+    private ArrayList<String> nomsColonnes;
+
+    /** Map des alias pour evaluer les colonnes */
+    private HashMap<String, Relation> aliasMap;
+
+    /**
+     * Constructeur de ProjectOperator
+     * @param fils iterator pour parcourir les tuples
+     * @param nomsColonnes Nom des colonnes à projeter
+     * @param aliasMap Map des alias pour evaluer les colonnes
+     */
     public ProjectOperator(IRecordIterator fils, ArrayList<String> nomsColonnes, HashMap<String, Relation> aliasMap) {
         this.fils = fils;
         this.nomsColonnes = nomsColonnes;
         this.aliasMap = aliasMap;
     }
 
+    /**
+     * Implémente getNextRecord() de IRecordIterator
+     */
     @Override
     public Record getNextRecord() {
         Record record = fils.getNextRecord();
@@ -22,7 +36,7 @@ public class ProjectOperator implements IRecordIterator{
         }
         ArrayList<String> valeurAProjeter = new ArrayList<>();
         for(String colonne : nomsColonnes){
-            //sérparer le nom de la colonne et l'alias
+            //séparer le nom de la colonne et l'alias
             String[] parties = colonne.split("\\.");
             String alias = parties[0]; //alias de la relation
             String nomColonne = parties[1]; //nom de la colonne
@@ -43,11 +57,17 @@ public class ProjectOperator implements IRecordIterator{
         return new Record(valeurAProjeter);
     }
 
+    /**
+     * Implémente close() de IRecordIterator
+     */
     @Override
     public void close() {
         fils.close();
     }
 
+    /**
+     * Implémente reset() de IRecordIterator
+     */
     @Override
     public void reset() {
         fils.reset();
