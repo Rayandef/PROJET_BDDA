@@ -74,9 +74,9 @@ public class Condition {
 
     //méthode qui convertit une valeur brute en fonction du type de la colonne
     private Object convertirValeur(String valeur, InfoColonne<String, String> col) {
-        String type = col.getType().toUpperCase();
+        String base = baseType(col.getType());
 
-        switch (type) {
+        switch (base) {
             case "INT":
                 return Integer.parseInt(valeur);
 
@@ -88,7 +88,7 @@ public class Condition {
                 return valeur;
 
             default:
-                throw new RuntimeException("Type inconnu : " + type);
+                throw new RuntimeException("Type inconnu : " + base);
         }
     }
 
@@ -148,9 +148,9 @@ public class Condition {
     //Méthode qui compare deux objets en fonction de l'opérateur
     private boolean comparer(Object gauche, Object droite, String op, InfoColonne<String, String> col) {
 
-        String type = col.getType().toUpperCase();
+        String base = baseType(col.getType());
 
-        switch (type) {
+        switch (base) {
             case "INT": {
                 double a = Double.parseDouble(gauche.toString());
                 double b = Double.parseDouble(droite.toString());
@@ -316,6 +316,14 @@ public class Condition {
     private boolean estColonne(String terme, HashMap<String, Relation> aliasMap) {
         if (!terme.contains(".")) return false;
             return recupererRelation(terme, aliasMap) != null;
+    }
+
+    //Méthode pour le le type de base de la colonne (exemple : CHAR(100) -> CHAR)
+    private String baseType(String typeStr) {
+        if (typeStr == null) return "";
+        int idx = typeStr.indexOf("(");
+        String t = (idx > 0) ? typeStr.substring(0, idx) : typeStr;
+        return t.toUpperCase();
     }
 
 }
