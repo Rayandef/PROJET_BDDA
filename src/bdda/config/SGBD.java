@@ -8,8 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Scanner;
 
-import bdda.config.Relation.Size;
-
 /** Classe représentant un SGBD */
 public class SGBD {
     /** Instance pour gérer le Disk Manager */
@@ -110,16 +108,8 @@ public class SGBD {
             for (String f : fields) {
                 String[] parts = f.split(":");
                 InfoColonne<String, String> col = new InfoColonne<>();
-                col.setNom(parts[0]);                
-                switch(parts[1]){
-                    case "FLOAT", "INT":
-                    col.setType(parts[1]);
-                    break;
-
-                    default:
-                    col.setType(parts[1].split("\\(")[0]);
-                    Size.valueOf(col.getType()).setTaille(Integer.parseInt(parts[1].split("\\(")[1].split("\\)")[0]));
-                }
+                col.setNom(parts[0]); 
+                col.setType(parts[1]); 
                 colonnes.add(col);
             }
 

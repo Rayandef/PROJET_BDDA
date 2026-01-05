@@ -62,12 +62,13 @@ public class Relation {
     */
     public Relation(String nom, List<InfoColonne<String, String>> infoColonne) throws Exception{
         this.nom = nom;
-        for(InfoColonne<String, String> info : infoColonne){
-            if (!(info.getType().equals("INT") ||info.getType().equals("FLOAT") || info.getType().equals("CHAR") || info.getType().equals("VARCHAR"))) {
+        for (InfoColonne<String, String> info : infoColonne) { 
+            String base = baseType(info.getType()); 
+            if (!(base.equals("INT") || base.equals("FLOAT") || base.equals("CHAR") || base.equals("VARCHAR"))) { 
                 throw new Exception("L'élément " + (infoColonne.indexOf(info) + 1) + " de la liste est incorrect");
-            } 
-            this.infoColonne = infoColonne;
+            }
         }
+        this.infoColonne = infoColonne; 
         colonne = infoColonne.size();
         int pageSize = bufferManager.getDbConfig().getPageSize();
         int recordSize = getRecordSlotSize();
@@ -78,10 +79,8 @@ public class Relation {
     public Relation(String nom, List<InfoColonne<String, String>> infoColonne, PageID headerPageId, DiskManager diskManager, BufferManager bufferManager) throws Exception {
         this.nom = nom;
         for (InfoColonne<String, String> info : infoColonne) {
-            if (!(info.getType().equals("INT") ||
-                info.getType().equals("FLOAT") ||
-                info.getType().equals("CHAR") ||
-                info.getType().equals("VARCHAR"))) {
+            String base = baseType(info.getType()); 
+            if (!(base.equals("INT") || base.equals("FLOAT") || base.equals("CHAR") || base.equals("VARCHAR"))) { 
                 throw new Exception("L'élément " + (infoColonne.indexOf(info) + 1) + " est incorrect");
             }
         }
@@ -142,11 +141,12 @@ public class Relation {
      */
     public void setInfoColonne(List<InfoColonne<String, String>> infoColonne) throws Exception{
         for(InfoColonne<String, String> info : infoColonne){
-            if(!(info.getType().equals("INT")) || !(info.getType().equals("FLOAT")) || !(info.getType().equals("CHAR")) || !(info.getType().equals("VARCHAR"))){
-                throw new Exception("L'élément " + (infoColonne.indexOf(info) + 1) + "de la liste est incorrecte");
+            String base = baseType(info.getType()); 
+            if(!(base.equals("INT") || base.equals("FLOAT") || base.equals("CHAR") || base.equals("VARCHAR"))){ 
+                throw new Exception("L'élément " + (infoColonne.indexOf(info) + 1) + " de la liste est incorrecte"); 
             }
-            this.infoColonne = infoColonne;
         }
+        this.infoColonne = infoColonne; 
         setColonne(infoColonne.size());
     }
 
@@ -187,10 +187,11 @@ public class Relation {
 
         for (int i = 0; i < infoColonne.size(); i++) {
             InfoColonne<String, String> col = infoColonne.get(i);
-            String type = col.getType().toUpperCase();
+            String rawType = col.getType();
+            String base = baseType(rawType);
             String valeur = valeurs.get(i);
 
-            switch (type) {
+            switch (base) { 
                 case "INT":
                     int intValue = Integer.parseInt(valeur);
                     buffer.putInt(intValue);
@@ -203,7 +204,7 @@ public class Relation {
 
                 case "CHAR":
                     valeur = SGBD.nettoyerConstante(valeur);
-                    int length = Size.CHAR.getTaille() ;
+                    int length = parsedSize(rawType); 
                     if (valeur.length() > length) {
                         valeur = valeur.substring(0, length);
                     } else {
@@ -217,18 +218,18 @@ public class Relation {
 
                 case "VARCHAR":
                     valeur = SGBD.nettoyerConstante(valeur);
-                    int maxLength = Size.VARCHAR.getTaille() ;
+                    int maxLength = parsedSize(rawType); 
                     if (valeur.length() > maxLength) {
                         valeur = valeur.substring(0, maxLength);
                     }
 
                     byte[] data = valeur.getBytes(StandardCharsets.UTF_8);
-                    buffer.putInt(data.length);  // longueur réelle
-                    buffer.put(data);            // contenu
+                    buffer.putInt(data.length);  
+                    buffer.put(data);            
                     break;
 
                 default:
-                    System.err.println("Type inconnu : " + type);
+                    System.err.println("Type inconnu : " + rawType); 
                     break;
             }
         }
@@ -245,22 +246,23 @@ public class Relation {
         List<String> valeurs = new ArrayList<>();
 
         for (InfoColonne<String, String> info : infoColonne) {
-            String type = info.getType();
+            String rawType = info.getType(); 
+            String base = baseType(rawType); 
 
-            if (type.equals("INT")) {
+            if (base.equals("INT")) { 
                 int val = buffer.getInt();
                 valeurs.add(String.valueOf(val));
-            } else if (type.equals("FLOAT")) {
+            } else if (base.equals("FLOAT")) { 
                 float val = buffer.getFloat();
                 valeurs.add(String.valueOf(val));
-            } else if (type.equals("CHAR")) {
-                int size = Size.CHAR.getTaille(); 
+            } else if (base.equals("CHAR")) { 
+                int size = parsedSize(rawType); 
                 byte[] data = new byte[size];
                 buffer.get(data);
                 String str = new String(data, StandardCharsets.UTF_8).trim();
                 valeurs.add(str);
-            } else if (type.equals("VARCHAR")) {
-                int maxSize = Size.VARCHAR.getTaille(); 
+            } else if (base.equals("VARCHAR")) { 
+                int maxSize = parsedSize(rawType); 
                 int len = buffer.getInt(); 
                 if (len > maxSize) len = maxSize;
                 byte[] data = new byte[len];
@@ -270,23 +272,24 @@ public class Relation {
             }
         }
 
-    record.setValeurs(valeurs);
+        record.setValeurs(valeurs);
     }
 
     private int getRecordSlotSize() {
         int size = 0;
         for (InfoColonne<String, String> info : infoColonne) {
-            String type = info.getType().toUpperCase();
-            switch (type) {
+            String rawType = info.getType();
+            String base = baseType(rawType);
+            switch (base) { 
                 case "INT":
                 case "FLOAT":
                     size += Integer.BYTES;
                     break;
                 case "CHAR":
-                    size += Size.CHAR.getTaille();
+                    size += parsedSize(rawType); 
                     break;
                 case "VARCHAR":
-                    size += Integer.BYTES + Size.VARCHAR.getTaille();
+                    size += Integer.BYTES + parsedSize(rawType);
                     break;
                 default:
                     break;
@@ -294,6 +297,7 @@ public class Relation {
         }
         return size;
     }
+
 
     private int getDataPageHeaderSize() {
         return Integer.BYTES + nbCasesParPage;
@@ -672,7 +676,8 @@ public class Relation {
         }
         boolean estInserable = true ;
         for (int i = 0 ; i < typeColonne.size() ; i++){
-            switch(typeColonne.get(i)){
+            String base = baseType(typeColonne.get(i)); 
+            switch(base){
                 case "INT" :
                     try {
                         Integer.parseInt(valeurs.get(i));
@@ -702,9 +707,36 @@ public class Relation {
                     }
                     break ;
                 default :
-                    System.out.println("C'est pas possible");
+                    System.out.println("Type de colonne inconnu : " + typeColonne.get(i)); 
+                    estInserable = false;
             }
         }
         return estInserable ;
+    }
+
+    //Méthode pour le le type de base de la colonne (exemple : CHAR(100) -> CHAR)
+    private String baseType(String typeStr) {
+        if (typeStr == null) return "";
+        int idx = typeStr.indexOf("(");
+        String t = (idx > 0) ? typeStr.substring(0, idx) : typeStr;
+        return t.toUpperCase();
+    }
+
+    //Méthode pour récupérer la taille de la colonne (exemple : CHAR(100) -> 100)
+    private int parsedSize(String typeStr) {
+        if (typeStr == null) return 0;
+        int idx1 = typeStr.indexOf("(");
+        int idx2 = typeStr.indexOf(")");
+        if (idx1 >= 0 && idx2 > idx1) {
+            try {
+                return Integer.parseInt(typeStr.substring(idx1 + 1, idx2));
+            } catch (NumberFormatException e) {
+                // ignore and fall back
+            }
+        }
+        String base = baseType(typeStr);
+        if ("CHAR".equals(base)) return Size.CHAR.getTaille();
+        if ("VARCHAR".equals(base)) return Size.VARCHAR.getTaille();
+        return 0;
     }
 }
