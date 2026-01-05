@@ -18,10 +18,10 @@ public class TestDBConfig {
      * @param dm_maxfilecount Le nombre maximum de fichiers à tester
      * @return Un objet DBConfig valide ou une configuration par défaut en cas d'erreur
      */
-    public static DBConfig testConstructeur(String dbpath, int pageSize, int dm_maxfilecount){
+    public static DBConfig testConstructeur(String dbpath, int pageSize, int dm_maxfilecount, double fileSize){
         DBConfig config1 = null;
         try {
-            config1 = new DBConfig(dbpath, pageSize, dm_maxfilecount);
+            config1 = new DBConfig(dbpath, pageSize, dm_maxfilecount, fileSize);
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return new DBConfig();
@@ -29,10 +29,10 @@ public class TestDBConfig {
         return config1;
     }
 
-    public static DBConfig testConstructeurTD3(String dbpath, int pageSize, int dm_maxfilecount, int bm_buffercount, String bm_policy){
+    public static DBConfig testConstructeurTD3(String dbpath, int pageSize, int dm_maxfilecount, int bm_buffercount, String bm_policy, double fileSize){
         DBConfig config = null;
         try {
-            config = new DBConfig(dbpath, pageSize, dm_maxfilecount, bm_buffercount, bm_policy);
+            config = new DBConfig(dbpath, pageSize, dm_maxfilecount, bm_buffercount, bm_policy, fileSize);
         }catch (Exception e){
             System.out.println(e.getMessage());
             return new DBConfig();
@@ -50,25 +50,25 @@ public class TestDBConfig {
         System.out.println("Test1");
         // 1. Test constructeur direct avec page size et dm_maxfilecount correct
         System.out.println("Test construteur sans erreur dans pagesize et dm_maxfilecount");
-        DBConfig testConfig1 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 32, 512);
+        DBConfig testConfig1 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 32, 512,512);
         System.out.println(" Fin test 1");
 
         System.out.println("Test2");
         // 2. Test constructeur direct avec pagesize incorrect et dm_maxfilecount correct
         System.out.println("Test construteur avec erreur dans pagesize et sans erreur dans dm_maxfilecount");
-        DBConfig testConfig2 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 0, 512);
+        DBConfig testConfig2 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 0, 512,512);
         System.out.println("Fin test 2");
 
         System.out.println("Test3");
         // 3. Test constructeur direct avec pagesize correct et dm_maxfilecount incorrect
         System.out.println("Test construteur avec erreur dans pagesize et sans erreur dans dm_maxfilecount");
-        DBConfig testConfig3 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 32, 0);
+        DBConfig testConfig3 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 32, 0,0);
         System.out.println("Fin test 3");
 
         System.out.println("Test4");
         // 4. Test constructeur dbpath incorrect avec pagesize et dm_maxfilecount correct
         System.out.println("Test construteur avec erreur dans pagesize et sans erreur dans dm_maxfilecount");
-        DBConfig testConfig4 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 32, 0);
+        DBConfig testConfig4 = testConstructeur("."+File.separator+"DB"+File.separator+"binData", 32, 0,0);
         System.out.println(" Fin test 4");
 
         System.out.println("Test5");
@@ -102,12 +102,12 @@ public class TestDBConfig {
         System.out.println("Test7");
         //7. Test constructeur avec bm_buffercount incorrect
         System.out.println("Test constructeur avec bm_buffercount incorrect");
-        DBConfig testconf4 = testConstructeurTD3("."+File.separator+"DB"+File.separator+"binData", 32, 512, 0, "LRU");
+        DBConfig testconf4 = testConstructeurTD3("."+File.separator+"DB"+File.separator+"binData", 32, 512, 0, "LRU",512);
         System.out.println("Fin test 7");
         System.out.println("Test8");
         //8. Test constructeur avec bm_policy incorrect
         System.out.println("Test constructeur avec bm_policy incorrect");
-        DBConfig testconf5 = testConstructeurTD3("."+File.separator+"DB"+File.separator+"binData", 32, 512, 20, "FIFO");
+        DBConfig testconf5 = testConstructeurTD3("."+File.separator+"DB"+File.separator+"binData", 32, 512, 20, "FIFO",512);
         System.out.println("===== Fin des tests DBConfig =====");
     }
 
