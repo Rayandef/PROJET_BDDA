@@ -478,7 +478,16 @@ public class SGBD {
                     appliquerSet(record, setMap, aliasMap);
                     RecordId rid = scanner.getCurrentRecordId();
                     rel.deleteRecord(rid);
-                    rel.writeRecordToDataPage(record, scanner.getCurrentRecordId().getPageId());
+                    RecordId nouveauRid = rel.insertRecord(record);
+                    if(nouveauRid == null){
+                        PageID pID = rel.allocateAndRegisterDataPage();
+                        if(pID != null){
+                            rel.writeRecordToDataPage(record, pID);
+                        }
+                        else{
+                            System.out.println("Erreur lors de l'update, record supprimé");
+                        }
+                    }
                     nbUpdate++;
                 }
             }
